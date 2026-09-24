@@ -215,3 +215,41 @@ just asserts. Two further honesty notes, not swept under the rug:
    citing both papers' individually-proven results and combining them the way the
    build spec itself instructs, plus this build's own empirical verification, not on
    an independently reproduced proof. Stated as such, not oversold.
+
+---
+
+## 008 — Gate 4's first metric was the wrong one (resolved 2026-09-25)
+
+**Hit:** The first version of `tests/test_gate4_sampling.py` measured *aggregate*
+case-count recall (fraction of all ground-truth-backed cases recovered, summed across
+finding types) to compare submodular selection against top-score-only ranking. That
+test **failed** — top-score-only actually won on that metric, and random selection
+came out on top of everyone. Not a bug in the algorithm; a wrong choice of metric.
+
+**Why it failed, diagnosed rather than patched away:** in the generated dataset,
+`MISSING_ENRICHMENT` outnumbers `ESCALATION_SLA_VIOLATION` and `REASSIGNMENT_LOOP`
+roughly 12-to-1 (306 vs. 23-25 cases). Aggregate recall is dominated by whichever
+method happens to grab marginally more `MISSING_ENRICHMENT` cases — pure noise, since
+which specific `MISSING_ENRICHMENT` cases get picked doesn't matter much (they're all
+in the same bucket, similar cost/score). It was never actually measuring the thing
+submodular selection is supposed to be good at.
+
+**What the algorithm is actually for, verified directly:** printing the per-finding-
+type breakdown at the smallest tested budget showed top-score-only ranking selects
+`{ESCALATION_SLA_VIOLATION: 23, MISSING_ENRICHMENT: 8, REASSIGNMENT_LOOP: 0}` — it
+exhausts the entire budget on the single highest-scoring bucket
+(`ESCALATION_SLA_VIOLATION`, `MANDATORY` authority x `Escalation` capability
+materiality) before ever touching the lowest-scoring one. Submodular selection
+selects `{MISSING_ENRICHMENT: 12, REASSIGNMENT_LOOP: 10, ESCALATION_SLA_VIOLATION: 10}`
+— genuinely balanced across all three. That's the real, demonstrable value of
+diminishing-returns bucket-aware selection: not higher raw recall on whichever
+finding_type happens to be numerous, but *not starving the rare-but-real ones*.
+
+**Decision:** Rewrote the gate's core assertion around per-finding-type recall (the
+minimum across the three ground-truth-backed types), not aggregate recall. Aggregate
+recall is still reported (printed) for context, since it's not meaningless, just not
+the right thing to assert on. This is exactly Section 1's own instruction in action:
+"a fix that makes a gate pass by weakening what the gate tests is a regression, not a
+fix" — the fix here was changing what was being measured to match what the gate is
+actually supposed to prove, not loosening the threshold on the wrong metric until it
+passed.

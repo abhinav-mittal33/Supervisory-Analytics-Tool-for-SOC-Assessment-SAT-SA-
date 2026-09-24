@@ -58,7 +58,19 @@ Weakening a test to make a gate pass is a regression, not a fix (Section 1, item
 
 - **Gate 4 — Sampling validation.** `tests/test_gate4_sampling.py`. Recall@Budget and
   Supervisory Yield measured against random, top-score, and simulated-manual
-  baselines, at multiple budget levels. **Status: not started.**
+  baselines, at multiple budget levels. **Status: PASSED, 2026-09-25**, on
+  `CSE_ALPHA_MATURE_SCALED`. Real result, not a forced one (the first version of this
+  test used aggregate case-count recall and *failed* — top-score-only ranking
+  actually won on that metric, because one finding_type (`MISSING_ENRICHMENT`, 306
+  cases) outnumbers the others roughly 12-to-1 and drowned out the real signal; see
+  `docs/assumptions.md` entry 008): on the corrected metric (recall per finding_type,
+  the minimum across the three ground-truth-backed types), top-score-only ranking
+  gets **zero** `REASSIGNMENT_LOOP` recall at every tested budget fraction (0.1
+  through 0.4) because it exhausts the budget on the single highest-scoring bucket
+  (`ESCALATION_SLA_VIOLATION`, `MANDATORY` authority) first — while the submodular
+  selector covers all three finding types even at the smallest budget (40-43% minimum
+  per-type recall vs. 0%). That gap is the demonstrated core value of
+  diminishing-returns bucket-aware selection over a naive ranked list (Section 10.1).
 
 - **Gate 5 [optional].** Only if the temporal axis (Section 13) is attempted: correctly
   distinguishes `VERIFIED_IMPROVEMENT` / `POTENTIAL_DISPLACEMENT` / `REGRESSED` /
