@@ -157,3 +157,32 @@ recovers a signal that isn't there. The drift end-to-end test uses the *scaled* 
 forward honestly into the pitch: metric-gaming detection has a real minimum-exposure
 floor, just like the negative-space detector's own `MIN_PEER_GROUP_SIZE` — it isn't
 free at any population size.
+
+---
+
+## 006 — Fusion scope: case-level only, deferred Data Reliability gate (resolved 2026-09-25)
+
+**Hit:** Section 5.2's Anomaly->Finding->Concern fusion and Section 11's Evidence
+Package don't specify a unit of analysis, but the detectors built so far operate at
+three different granularities — case-level (structural loop detector, OKF Response/
+Precedence/Cardinality violations), queue-level (negative space), and period-level
+(CUSUM/EWMA drift). A single Concern list needs one key to be gate-testable at all.
+
+**Decision:** Scoped `src/satsa/moat1/fusion.py` to case-level fusion only for Build
+Order Step 8 / Gate 2, since Gate 2's own requirement (recover planted pathologies,
+reject the full hard-negative set) is defined entirely in terms of the case-level
+detectors already Gate-1-validated. Queue-level negative-space and period-level drift
+findings remain a separate, not-yet-fused Concern stream — revisit when the sampling
+layer's hierarchical scheme (Section 10.4: portfolio-level across CSEs, then
+case-level within each) gives them a natural second key to fuse against.
+
+**Also deferred, flagged rather than hidden:** every Evidence Package in this build
+uses `evidence_quality="HIGH"` unconditionally (`src/satsa/moat1/fusion.py`'s
+`DEFAULT_EVIDENCE_QUALITY`) and every detector's `anomaly_score`/
+`conformance_deviation` is binary (1.0 or the case produces no signal), never a
+continuous magnitude. Both are honest simplifications, not silent ones: the Data
+Reliability/ABSTAIN gate (Section 5.3) that would make evidence_quality vary with
+actual data completeness doesn't exist yet in this build, and no detector built so far
+(structural match, OKF rule violation) is the kind of thing that naturally produces a
+continuous score — that's the secondary Isolation-Forest detector's job (Section 9.3),
+which Gate 2 doesn't require.

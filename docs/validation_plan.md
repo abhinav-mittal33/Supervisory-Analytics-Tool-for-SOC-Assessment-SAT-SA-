@@ -40,7 +40,17 @@ Weakening a test to make a gate pass is a regression, not a fix (Section 1, item
 - **Gate 2 — Full pathology + hard-negative benchmark.** `tests/test_gate2_pathologies.py`.
   All planted pathologies recovered, precision/recall/false-positive rate reported,
   true-negative rate on the full hard-negative set. Any numeric target here is an
-  engineering target, not a real-world performance claim. **Status: not started.**
+  engineering target, not a real-world performance claim. **Status: PASSED,
+  2026-09-25**, on all three generated profiles: precision=1.000 recall=1.000
+  fp_rate=0.000 on `REASSIGNMENT_LOOP`, true-negative rate=1.000 on the full
+  hard-negative set (planted shift-change hard negatives + the
+  `REASSIGNMENT_CHAIN_NO_LOOP` count-only false-positive trap). Fusion:
+  `src/satsa/moat1/fusion.py::fuse`. The real thing this gate forced: the weaker
+  `REASSIGN-CARD-001` OKF rule (count > 2 reassignments) *does* fire on every hard
+  negative and every chain-no-loop case — fusion must explicitly suppress it wherever
+  the finer structural detector has already ruled on the same case, logged as an audit
+  note, or this gate fails outright regardless of the reassignment-loop finding_type's
+  own numbers looking perfect in isolation.
 
 - **Gate 3 — Causal honesty test.** `tests/test_gate3_causal_honesty.py`. Withheld-
   confounder + sensitivity-analysis requirement. STOP and withhold causal results from
