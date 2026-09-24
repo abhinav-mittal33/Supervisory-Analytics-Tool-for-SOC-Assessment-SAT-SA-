@@ -74,3 +74,6 @@ sat-sa/
 - `jsonschema` (MIT) is used for OCEL 2.0 JSON validation against the official schema.
 - Python 3.11.15 confirmed installed via Homebrew and used for the project virtualenv
   at `.venv/`.
+- DuckDB's `sqlite` extension can `ATTACH` an OCEL 2.0 SQLite file directly and query
+  its tables with ordinary SQL, confirmed locally before `src/satsa/okf/compiler.py`
+  was built on top of it (Build Order Step 6).

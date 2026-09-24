@@ -163,6 +163,24 @@ def generate(profile: CSEProfile) -> tuple[OCEL, list[dict]]:
         case_rels.append(Relationship(analyst, "current_assignee"))
         case_rels.append(Relationship(queue, "current_queue"))
 
+        # Escalation branches off the ASSIGN timestamp, not the end of the
+        # enrich/investigate sequence below — a CRITICAL alert on a HIGH/CRITICAL
+        # asset should escalate immediately in parallel with (not strictly after)
+        # deeper investigation, which is also the only way a 30-minute SLA
+        # (OKF rule ESC-CRIT-001) is ever achievable given enrich+investigate alone
+        # can take well over 30 minutes.
+        mandatory_escalation = severity == "CRITICAL" and asset_crit in ("HIGH", "CRITICAL")
+        if mandatory_escalation:
+            roll = rng.random()
+            if roll < profile.escalation_compliance_rate:
+                escalate_time = t + timedelta(minutes=rng.uniform(5, 25))  # within the 30-min SLA
+                ocel.events.append(Event(next_eid(), "ESCALATE", escalate_time, (), (Relationship(case_id, "escalation_for_case"),)))
+            elif roll < profile.escalation_compliance_rate + (1 - profile.escalation_compliance_rate) / 2:
+                escalate_time = t + timedelta(minutes=rng.uniform(35, 180))  # escalated, but past the SLA
+                ocel.events.append(Event(next_eid(), "ESCALATE", escalate_time, (), (Relationship(case_id, "escalation_for_case"),)))
+            # else: never escalated — the structural negative-space case (Section 9.2):
+            # no ESCALATE event, no relationship, nothing to find in a flat case-level table.
+
         if case_idx in positive_indices or case_idx in hard_negative_indices:
             is_hard_negative = case_idx in hard_negative_indices
             analyst_a, analyst_b = rng.sample(analysts, 2)
@@ -248,18 +266,6 @@ def generate(profile: CSEProfile) -> tuple[OCEL, list[dict]]:
         ocel.events.append(
             Event(next_eid(), "INVESTIGATE", t, (), (Relationship(case_id, "investigate_for_case"), Relationship(analyst, "investigated_by")))
         )
-
-        mandatory_escalation = severity == "CRITICAL" and asset_crit in ("HIGH", "CRITICAL")
-        if mandatory_escalation:
-            roll = rng.random()
-            if roll < profile.escalation_compliance_rate:
-                t += timedelta(minutes=rng.uniform(5, 25))  # within the 30-min SLA
-                ocel.events.append(Event(next_eid(), "ESCALATE", t, (), (Relationship(case_id, "escalation_for_case"),)))
-            elif roll < profile.escalation_compliance_rate + (1 - profile.escalation_compliance_rate) / 2:
-                t += timedelta(minutes=rng.uniform(35, 180))  # escalated, but past the SLA
-                ocel.events.append(Event(next_eid(), "ESCALATE", t, (), (Relationship(case_id, "escalation_for_case"),)))
-            # else: never escalated — the structural negative-space case (Section 9.2):
-            # no ESCALATE event, no relationship, nothing to find in a flat case-level table.
 
         if rng.random() < 0.7:
             t += timedelta(minutes=rng.uniform(10, 90))

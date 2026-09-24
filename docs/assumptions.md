@@ -96,3 +96,31 @@ benchmark (CardinalOps 2025 State of SIEM Detection Risk report; SANS SOC Survey
 needing the BPIC logs. Revisit only if a future step needs real timing/branching
 statistics for the case-lifecycle skeleton specifically, which the hand-modeled
 lifecycle hasn't needed so far.
+
+---
+
+## 004 — ESC-CRIT-001 time_constraint reference point (resolved 2026-09-25)
+
+**Hit:** The build spec's own worked OKF example (Section 6.3) gives ESC-CRIT-001 a
+`time_constraint` of "<=30 minutes" but doesn't specify what that 30 minutes is
+measured *from* — the triggering condition becoming true has no single unambiguous
+event in an object-centric model (case creation? alert raised? assignment?).
+
+**Decision:** Implemented the RESPONSE template's time_constraint as measured from the
+case's earliest case-linked event (in this generator's lifecycle, that's ASSIGN) to
+the expected event's (ESCALATE) timestamp. Chose this over "case open" or "alert
+raised" because those aren't case-linked events in the `case_events` view
+(`src/satsa/okf/compiler.py`) — ALERT_RAISED relates to an Asset, OPEN_CASE relates to
+an Alert, neither carries a `*_for_case` E2O qualifier to the Case object itself.
+
+**A real bug this surfaced:** the generator originally emitted ESCALATE *after*
+ENRICH+INVESTIGATE, which alone can take 25-180 minutes — meaning every case, compliant
+or not, would violate a 30-minute SLA measured from any reasonable reference point.
+Fixed by moving the escalation branch to fire off the ASSIGN timestamp directly,
+independent of the enrich/investigate timeline — which also happens to be more
+realistic SOC practice (a CRITICAL alert on a high-value asset gets escalated in
+parallel with, not strictly after, deeper investigation). Caught by inspecting the
+generator's own timing arithmetic while implementing the RESPONSE template, before any
+test was run against it — fixed in the generator first, then verified via an
+independent Python oracle for each OKF template asserted to agree with the
+DuckDB-compiled result (`tests/test_okf_compiler.py`).
