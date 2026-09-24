@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+data/dev/*.sqlite
+data/dev/*.json
+data/scaled/*.sqlite
+data/scaled/*.json
+.DS_Store
+.env
