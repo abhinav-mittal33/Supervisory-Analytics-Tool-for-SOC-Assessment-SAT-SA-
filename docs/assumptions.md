@@ -186,3 +186,32 @@ actual data completeness doesn't exist yet in this build, and no detector built 
 (structural match, OKF rule violation) is the kind of thing that naturally produces a
 continuous score — that's the secondary Isolation-Forest detector's job (Section 9.3),
 which Gate 2 doesn't require.
+
+---
+
+## 007 — Submodular selection: which guarantee is actually being claimed (resolved 2026-09-25)
+
+**Hit:** Section 10.4 asks for "the near-linear-time thresholding-greedy variant
+(Badanidiyuru & Vondrák, 2014)" while also citing Sviridenko (2004) for the exact
+(1-1/e) theorem, and says to "put the exact ratio and both citations on the slide, not
+a vague 'provably near-optimal.'" But Sviridenko's (1-1/e) result is specifically
+proven for a seed-enumeration-over-the-FULL-candidate-set + classical-greedy-
+completion structure; B&V's contribution is a different, faster completion
+subroutine. Naively combining "Sviridenko's ratio" with "B&V's speed" without being
+precise about what changes when you swap the completion method would be exactly the
+kind of unearned claim Section 2's claim-discipline principle forbids.
+
+**Decision:** State the guarantee as **(1-1/e-epsilon)**, not the exact (1-1/e) —
+this is what both papers are actually cited for in the literature when combined this
+way, and it's what `src/satsa/sampling/submodular.py` actually verifies empirically
+(`tests/test_submodular.py`, brute-force comparison on a small instance) rather than
+just asserts. Two further honesty notes, not swept under the rug:
+1. The seed pool is capped at `top_k_seeds` candidates (ranked by singleton density),
+   not the full candidate set — this is what makes the algorithm near-linear instead
+   of the naive O(n^5), but it means the seed-enumeration step is itself an
+   approximation of Sviridenko's exact method, not a literal implementation of it.
+2. No formal proof was re-derived for this specific combination (capped-seed
+   enumeration + thresholding-greedy completion) — the (1-1/e-epsilon) claim rests on
+   citing both papers' individually-proven results and combining them the way the
+   build spec itself instructs, plus this build's own empirical verification, not on
+   an independently reproduced proof. Stated as such, not oversold.

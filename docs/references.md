@@ -51,3 +51,12 @@ escalation/enrichment/telemetry rates) rather than the same generator reseeded.
 | Library | License | Role |
 |---|---|---|
 | DoWhy | MIT (to re-verify at install time) | Graphical causal model, potential-outcomes estimation, refutation/sensitivity API |
+
+## Sampling layer citations (Section 10.4, Build Order Step 9)
+
+| Citation | Used for | Exact claim made |
+|---|---|---|
+| Sviridenko, M. (2004). "A note on maximizing a submodular set function subject to a knapsack constraint." *Operations Research Letters* 32(1). | The (1-1/e) worst-case guarantee's structure: bounded seed enumeration + greedy completion. | This build enumerates seed subsets up to size 3 from a capped top-K candidate pool (`top_k_seeds` in `src/satsa/sampling/submodular.py`), not the full candidate set — see the entry below for why the resulting guarantee is stated as (1-1/e-epsilon), not the exact (1-1/e). |
+| Badanidiyuru, A. & Vondrák, J. (2014). "Fast algorithms for maximizing submodular functions." *SODA 2014*. | The near-linear-time thresholding-greedy completion step, replacing the classical one-at-a-time incremental greedy Sviridenko's method uses. | `threshold_greedy_complete` in `src/satsa/sampling/submodular.py`. |
+
+**Exact claim for the pitch slide:** "(1-1/e-epsilon)-approximate budgeted submodular selection, combining Sviridenko's (2004) seed-enumeration structure with Badanidiyuru-Vondrák's (2014) near-linear thresholding-greedy completion" — not a bare "provably near-optimal." See `docs/assumptions.md` entry 007 for why the combined guarantee is stated with the epsilon term rather than as Sviridenko's exact (1-1/e).

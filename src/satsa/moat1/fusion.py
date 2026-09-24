@@ -33,6 +33,7 @@ from satsa.moat1.structural import detect_reassignment_loops
 from satsa.ocel.model import OCEL
 from satsa.okf.compiler import evaluate_rule
 from satsa.okf.rules import ENR_PREC_001, ESC_CRIT_001, REASSIGN_CARD_001
+from satsa.sampling.cost_model import estimate_review_cost_minutes
 
 EVIDENCE_QUALITY_WEIGHT = {"HIGH": 1.0, "MEDIUM": 0.6, "LOW": 0.3}
 AUTHORITY_SEVERITY_WEIGHT = {"MANDATORY": 1.0, "EXPECTED": 0.7, "PEER_NORMAL": 0.5, "OPTIONAL": 0.3, "UNKNOWN": 0.1}
@@ -72,6 +73,9 @@ def _make_package(
     capability_materiality = CAPABILITY_MATERIALITY.get(capability, 0.5)
     severity_weight = AUTHORITY_SEVERITY_WEIGHT[authority]
     concern_score = finding_score * capability_materiality * severity_weight
+    review_cost = estimate_review_cost_minutes(
+        evidence_volume=len(event_ids), authority=authority, evidence_quality=evidence_quality
+    )
 
     return EvidencePackage(
         finding_id=finding_id,
@@ -85,7 +89,7 @@ def _make_package(
         concern_score=concern_score,
         confidence=1.0,
         evidence_quality=evidence_quality,
-        estimated_review_cost_minutes=15.0,
+        estimated_review_cost_minutes=review_cost,
         affected_objects=[case_id],
         supporting_cases=[case_id],
         supporting_events=event_ids,
