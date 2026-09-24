@@ -16,6 +16,12 @@ Weakening a test to make a gate pass is a regression, not a fix (Section 1, item
   `ocel/json_io.py`. A second bug (sqlite3 cursor reuse silently truncating a nested
   query's outer loop) was also caught and fixed in `ocel/sqlite_io.py::read_sqlite`.
 
+  Re-confirmed at full scale, 2026-09-25 (`tests/test_gate0_scaled_profiles.py`),
+  against two structurally distinct calibrated CSE profiles (Build Order Step 4):
+  `CSE_ALPHA_MATURE_SCALED` (2,200 cases, 4,626 objects, 14,706 events) and
+  `CSE_BETA_SMALL_SCALED` (2,000 cases, 4,068 objects, 12,753 events) — see
+  `docs/references.md` for the calibration citations.
+
 - **Gate 1 — Core pattern recovery.** `tests/test_gate1_reassignment.py`. Recover the
   planted reassignment loop (precision/recall/F1) and correctly reject its matched
   hard negative. **Status: not started.**

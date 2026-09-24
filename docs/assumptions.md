@@ -75,17 +75,24 @@ re-verify DoWhy's actual installed capability at Build Order Step 11.
 
 ---
 
-## 003 — BPIC dataset license check (open, revisit at Step 4)
+## 003 — BPIC dataset license check (resolved 2026-09-25)
 
 **Hit:** Section 14.4 asks for a real, public, structurally-adjacent event log (BPIC
 2013/2014 incident/ITSM logs) to anchor the generic case-lifecycle skeleton's timing
-and branching statistics. Research confirms both datasets are real and hosted on
-4TU.ResearchData, but exact per-dataset license terms were not verified file-by-file
-in this pass.
+and branching statistics.
 
-**Decision so far:** Defer to Build Order Step 4 (second CSE profile + calibration).
-Will download and check the license file accompanying each specific dataset directly
-before using any of its statistics, and record the citation + license in
-`docs/references.md`. If licensing is unclear or restrictive, fall back to
-Section 14.2-14.3 alone (calibrated-synthetic, no real-log grounding) — an explicitly
-defensible position per the spec's own text.
+**Resolved:** Checked the BPIC 2013 dataset page directly on 4TU.ResearchData — it
+carries no dataset-specific license override, so it falls under 4TU's General Terms
+of Use, which is **CC0** (public domain dedication) for any dataset "where no other
+licence is given." No licensing blocker. Recorded in `docs/references.md`.
+
+**Decision:** Deferred anyway, not because of licensing but because Section 14.4 itself
+frames the BPIC pull as an optional additional grounding layer and explicitly endorses
+proceeding on calibrated-synthetic parameters alone (Section 14.2-14.3) when that's
+sufficient. The calibration table populated at Build Order Step 4
+(`docs/references.md`) anchors every generator rate to a cited, directly-quoted public
+benchmark (CardinalOps 2025 State of SIEM Detection Risk report; SANS SOC Survey
+2025), which meets the spec's actual requirement — "don't invent numbers" — without
+needing the BPIC logs. Revisit only if a future step needs real timing/branching
+statistics for the case-lifecycle skeleton specifically, which the hand-modeled
+lifecycle hasn't needed so far.
