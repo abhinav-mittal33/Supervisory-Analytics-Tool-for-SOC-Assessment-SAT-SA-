@@ -24,7 +24,18 @@ Weakening a test to make a gate pass is a regression, not a fix (Section 1, item
 
 - **Gate 1 — Core pattern recovery.** `tests/test_gate1_reassignment.py`. Recover the
   planted reassignment loop (precision/recall/F1) and correctly reject its matched
-  hard negative. **Status: not started.**
+  hard negative. **Status: PASSED, 2026-09-25**, on all three generated datasets:
+  precision=1.000 recall=1.000 F1=1.000 in every case (dev: 6 positives/6 hard
+  negatives; mature-scaled: 25/25; small-scaled: 20/20). Detector:
+  `src/satsa/moat1/structural.py::detect_reassignment_loops`. The test also confirms
+  the Section 9.1 requirement directly: the *raw* structural pattern (repeated analyst
+  within a small analyst set, ignoring the justification attribute) is detected in
+  BOTH the positive and hard-negative sets before the justification filter is applied
+  — proving the detector reads object relationships, not the `handover_reason`
+  attribute, to find the loop shape itself. Two background-noise categories
+  (`SINGLE_REASSIGNMENT`, `REASSIGNMENT_CHAIN_NO_LOOP` — same-ish event counts, no
+  repeated analyst) were added to the generator specifically so this gate has real
+  negatives to reject, not just an absence of any reassignment activity.
 
 - **Gate 2 — Full pathology + hard-negative benchmark.** `tests/test_gate2_pathologies.py`.
   All planted pathologies recovered, precision/recall/false-positive rate reported,

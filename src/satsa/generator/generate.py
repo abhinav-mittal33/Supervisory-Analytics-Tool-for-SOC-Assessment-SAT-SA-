@@ -89,12 +89,27 @@ def generate(profile: CSEProfile) -> tuple[OCEL, list[dict]]:
     for qid in queues:
         ocel.objects.append(Obj(qid, "Queue", (ObjectAttributeValue("name", qid, EPOCH),), ()))
 
-    special_pool = list(range(profile.num_cases))
-    rng.shuffle(special_pool)
+    # Reassignment activity buckets, drawn from disjoint index slices so a case never
+    # falls into more than one category. Two "background noise" categories exist
+    # specifically so Gate 1 (tests/test_gate1_reassignment.py) has real negatives to
+    # tell the loop pattern apart from: a single routine handoff, and a reassignment
+    # *chain* through distinct specialists that never repeats an analyst — the latter
+    # is exactly the trap Section 9.1 warns about (same reassignment *count* as a real
+    # loop, but no object-relationship cycle, so a naive "count reassignments per case"
+    # feature would misfire on it while a genuinely object-centric detector must not).
+    shuffled_pool = list(range(profile.num_cases))
+    rng.shuffle(shuffled_pool)
     n_special = profile.num_reassignment_loop_positive + profile.num_reassignment_loop_hard_negative
-    special = special_pool[:n_special]
+    n_single = max(0, int(profile.num_cases * 0.10))
+    n_chain = max(0, int(profile.num_cases * 0.05))
+
+    special = shuffled_pool[:n_special]
     positive_indices = set(special[: profile.num_reassignment_loop_positive])
     hard_negative_indices = set(special[profile.num_reassignment_loop_positive : n_special])
+    single_reassignment_indices = set(shuffled_pool[n_special : n_special + n_single])
+    chain_no_loop_indices = set(
+        shuffled_pool[n_special + n_single : n_special + n_single + n_chain]
+    )
 
     ground_truth: list[dict] = []
     event_counter = 0
@@ -177,6 +192,51 @@ def generate(profile: CSEProfile) -> tuple[OCEL, list[dict]]:
                     "is_hard_negative": is_hard_negative,
                     "analysts_involved": [analyst_a, analyst_b],
                     "reassignment_count": loop_len,
+                }
+            )
+        elif case_idx in single_reassignment_indices:
+            target = rng.choice([a for a in analysts if a != analyst])
+            t += timedelta(minutes=rng.uniform(5, 45))
+            ocel.events.append(
+                Event(
+                    next_eid(),
+                    "REASSIGN",
+                    t,
+                    (),
+                    (Relationship(case_id, "reassignment_for_case"), Relationship(target, "reassigned_to")),
+                )
+            )
+            analyst = target
+            ground_truth.append(
+                {
+                    "case_id": case_id,
+                    "pathology": "SINGLE_REASSIGNMENT",
+                    "is_hard_negative": False,
+                    "analysts_involved": [target],
+                    "reassignment_count": 1,
+                }
+            )
+        elif case_idx in chain_no_loop_indices:
+            chain_targets = rng.sample([a for a in analysts if a != analyst], 3)
+            for target in chain_targets:
+                t += timedelta(minutes=rng.uniform(5, 45))
+                ocel.events.append(
+                    Event(
+                        next_eid(),
+                        "REASSIGN",
+                        t,
+                        (),
+                        (Relationship(case_id, "reassignment_for_case"), Relationship(target, "reassigned_to")),
+                    )
+                )
+                analyst = target
+            ground_truth.append(
+                {
+                    "case_id": case_id,
+                    "pathology": "REASSIGNMENT_CHAIN_NO_LOOP",
+                    "is_hard_negative": False,
+                    "analysts_involved": chain_targets,
+                    "reassignment_count": len(chain_targets),
                 }
             )
 

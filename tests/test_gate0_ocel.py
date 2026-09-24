@@ -92,8 +92,9 @@ def test_ground_truth_ids_correspond_to_real_records(generated):
         for analyst_id in entry["analysts_involved"]:
             assert analyst_id in object_ids
 
-    positives = [g for g in ground_truth if not g["is_hard_negative"]]
-    hard_negatives = [g for g in ground_truth if g["is_hard_negative"]]
+    loops = [g for g in ground_truth if g["pathology"] == "REASSIGNMENT_LOOP"]
+    positives = [g for g in loops if not g["is_hard_negative"]]
+    hard_negatives = [g for g in loops if g["is_hard_negative"]]
     assert positives, "no positive REASSIGNMENT_LOOP instances planted"
     assert hard_negatives, "no matched hard-negative instances planted"
     assert len(positives) == MATURE_CSE_DEV.num_reassignment_loop_positive

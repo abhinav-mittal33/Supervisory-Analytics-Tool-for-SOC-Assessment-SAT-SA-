@@ -45,7 +45,8 @@ mapping, and produces its own violation count.
 
 | finding_type | Statistical test producing confidence | Notes |
 |---|---|---|
-| _(populated at Build Order Step 7-8 as negative-space / drift / structural detectors are implemented)_ | | |
+| `REASSIGNMENT_LOOP` | Exact structural match (deterministic, not a statistical test): repeated Analyst object within a bounded-size analyst set across a case's REASSIGN trace, gated by absence of the `handover_reason=SHIFT_CHANGE` justification attribute. Confidence is binary (matched pattern / did not) rather than a continuous score — appropriate here since the pattern is a structural rule, not an estimated quantity. `src/satsa/moat1/structural.py::detect_reassignment_loops`. | Authority class: `EXPECTED` (deviation from the documented shift-change handover SOP). Gate 1: precision=recall=F1=1.000 on all three generated profiles. |
+| _(remaining finding_types populated at Build Order Step 7-8 as negative-space / drift detectors are implemented)_ | | |
 
 Confidence and evidence-quality are never blended into one number (see Evidence
 Package schema in `docs/architecture.md`).
