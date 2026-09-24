@@ -11,6 +11,7 @@ dependencies = [
     "jsonschema",
     "scipy",
     "statsmodels",
+    "dowhy",
 ]
 
 [project.optional-dependencies]

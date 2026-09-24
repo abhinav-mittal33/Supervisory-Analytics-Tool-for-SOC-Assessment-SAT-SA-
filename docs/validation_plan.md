@@ -54,7 +54,16 @@ Weakening a test to make a gate pass is a regression, not a fix (Section 1, item
 
 - **Gate 3 — Causal honesty test.** `tests/test_gate3_causal_honesty.py`. Withheld-
   confounder + sensitivity-analysis requirement. STOP and withhold causal results from
-  the demo on failure. **Status: not started.**
+  the demo on failure. **Status: PASSED, 2026-09-25.** Two scenarios, both through the
+  identical pipeline (no scenario-specific tuning): a strong, clean, unconfounded
+  effect correctly reaches `ACT` with the right sign (effect=0.601, robustness
+  value=0.519); a moderate effect deliberately confounded strongly enough to flip the
+  naive withheld-confounder estimate's sign (with-confounder=+0.099,
+  without-confounder=-0.165) correctly falls below the robustness bar (0.171 < 0.3)
+  and returns `INVESTIGATE_MORE` rather than presenting the flipped estimate as
+  actionable. DoWhy's own built-in sensitivity refuter was tried first and found
+  unsuitable for this build's data (see `docs/assumptions.md` entry 009) — replaced
+  with the closed-form Cinelli-Hazlett Robustness Value.
 
 - **Gate 4 — Sampling validation.** `tests/test_gate4_sampling.py`. Recall@Budget and
   Supervisory Yield measured against random, top-score, and simulated-manual

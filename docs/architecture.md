@@ -81,3 +81,9 @@ sat-sa/
   than an SPDX tag, but it's the well-known BSD scipy license) and `statsmodels`
   (BSD-3-Clause) added at Build Order Step 7 for the Poisson/NB negative-space
   regression Section 9.4 explicitly mandates — no copyleft concern, unlike entry 001.
+- `dowhy` 0.14 confirmed MIT-licensed, added at Build Order Step 11 for formal causal
+  identification. Its own simulation-based sensitivity refuter was evaluated and
+  found unsuitable for this build's data (see docs/assumptions.md entry 009) — the
+  numeric estimate/CI and the sensitivity analysis itself are implemented directly
+  (statsmodels OLS + the closed-form Cinelli-Hazlett Robustness Value) rather than
+  through DoWhy's own estimator/refuter wrappers.

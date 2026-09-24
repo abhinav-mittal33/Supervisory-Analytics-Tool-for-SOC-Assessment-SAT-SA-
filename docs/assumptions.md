@@ -64,14 +64,12 @@ estimation natively over object-centric event-log control-flow structure (verifi
 research: this is active academic territory — decision-point extraction, ARE
 algorithm, etc. — not a packaged tool).
 
-**Decision so far:** Build Moat 2 on **DoWhy** (MIT-licensed, verify at Step 11) for
-the graphical-model + potential-outcomes estimation and its refutation API
-(`add_unobserved_common_cause` for the withheld-confounder sensitivity number Gate 3
-requires), with a hand-written process-aware preprocessing layer that extracts
-treatment/outcome/confounders from OCEL structure before handing a tabular frame to
-DoWhy. This preprocessing step is the real engineering work — flagged here so it
-isn't mistaken for "just call a library" later. Not yet implemented; revisit and
-re-verify DoWhy's actual installed capability at Build Order Step 11.
+**Decision (updated at Step 11, see entry 009 for what actually shipped):** DoWhy
+confirmed installed, MIT-licensed (`pip show dowhy` -> `License: MIT`, version 0.14).
+Used for formal causal identification (`CausalModel.identify_effect`) — its actual
+strength. Its own simulation-based sensitivity refuter (`add_unobserved_common_cause`)
+was tried, found unsuitable for this build's data, and replaced with a closed-form
+method instead. Full account in entry 009.
 
 ---
 
@@ -253,3 +251,58 @@ the right thing to assert on. This is exactly Section 1's own instruction in act
 fix" — the fix here was changing what was being measured to match what the gate is
 actually supposed to prove, not loosening the threshold on the wrong metric until it
 passed.
+
+---
+
+## 009 — Moat 2 sensitivity analysis: DoWhy's built-in refuter tried and replaced (resolved 2026-09-25)
+
+**Hit:** Section 12 requires quantifying "how large an unobserved confounder's effect
+would need to be to flip the estimated direction — a number, not a caveat sentence,"
+and Gate 3 requires validating this on synthetic data with one confounder deliberately
+withheld. The natural first approach: DoWhy's `refute_estimate(...,
+method_name="add_unobserved_common_cause")`, which simulates adding a hypothetical
+confounder at a configurable `effect_strength_on_treatment`/`effect_strength_on_outcome`
+and reports the new estimate.
+
+**What was actually tried and measured, not assumed:** built four synthetic
+scenarios — no confounding, weak confounding, moderate confounding, strong confounding
+deliberately tuned to flip the naive estimate's sign — and swept
+`effect_strength` from 0.0 to 1.0 in each. Result: **the sign flipped at a similar,
+fairly low simulated strength (roughly 0.2-0.6) in every single scenario, including
+the one with zero real confounding.** This method's `effect_strength` parameter, at
+least for a binary treatment/outcome DGP at this effect size and sample size, is not
+a discriminator between "genuinely fragile" and "genuinely robust" in this build's
+hands — the simulated confounder is simply a strong perturbation regardless of
+context. Documenting this as a real, useful negative result rather than quietly
+picking whichever parameter happened to make one test pass — that would have been
+exactly the kind of unearned claim Section 2 forbids.
+
+**What replaced it:** the Robustness Value (RV) from Cinelli & Hazlett (2020),
+"Making Sense of Sensitivity: Extending Omitted Variable Bias," JRSS-B 82(1) — a
+closed-form function of the treatment coefficient's t-statistic and residual degrees
+of freedom (`src/satsa/moat2/sensitivity.py::robustness_value`), no simulation, no
+arbitrary strength parameter. Verified it behaves sensibly: RV increases monotonically
+with the true effect's statistical strength (checked across true_effect =
+0.3/0.6/1.0/2.0/4.0 with zero confounding: RV = 0.07/0.15/0.22/0.38/0.52).
+
+**The fundamental limit, stated plainly rather than glossed over:** RV measures how
+robust the *current* estimate is to being explained away by a hypothetical confounder
+— it is provably incapable of detecting whether the current estimate is *already*
+biased by one that's actually there (if that were detectable from the data, the
+confounder wouldn't be "unobserved"). No sensitivity method, DoWhy's or this one, can
+close that gap; it's a property of observational causal inference, not an
+implementation shortfall. What RV *does* give: a principled reason to refuse
+confidence in weak-to-moderate effects specifically, which is exactly where residual
+confounding risk matters most.
+
+**Decision engine policy that follows from this:** `src/satsa/moat2/decision.py`
+outputs `ACT` only when the CI excludes zero AND RV clears a documented, conservative
+constant (`ROBUSTNESS_VALUE_THRESHOLD = 0.3`, chosen once, not fit per-scenario) —
+otherwise `INVESTIGATE_MORE`. Gate 3 passes on two scenarios that exercise both
+directions, not one that's trivially always conservative: a strong, clean,
+unconfounded effect (RV=0.519) correctly reaches `ACT` with the right sign, and a
+moderate effect deliberately confounded strongly enough to flip the naive
+withheld-confounder estimate's sign (reference-with-confounder=+0.099,
+without-confounder=-0.165) correctly stays below the RV bar (0.171) and returns
+`INVESTIGATE_MORE` — never presenting the flipped, wrong-signed estimate as
+actionable. `tests/test_gate3_causal_honesty.py`.

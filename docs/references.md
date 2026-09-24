@@ -46,11 +46,13 @@ cases/CSE, ~50 assets/CSE" instruction, and are structurally distinct (different
 analyst/queue counts, different severity/criticality distributions, different
 escalation/enrichment/telemetry rates) rather than the same generator reseeded.
 
-## Causal engine (Section 12 / Moat 2) — pending, Build Order Step 11
+## Causal engine (Section 12 / Moat 2) — Build Order Step 11
 
-| Library | License | Role |
+| Library / Citation | License | Role |
 |---|---|---|
-| DoWhy | MIT (to re-verify at install time) | Graphical causal model, potential-outcomes estimation, refutation/sensitivity API |
+| DoWhy 0.14 | MIT (confirmed via `pip show dowhy`) | Formal causal identification (`CausalModel.identify_effect`) — documents the estimand and its unconfoundedness assumption explicitly, per Section 12. |
+| `statsmodels` OLS | BSD-3-Clause (already in use, Step 7) | The numeric effect estimate, confidence interval, and t-statistic/df feeding the robustness value — chosen over DoWhy's own estimator wrapper for reliable CI/sensitivity-input access. |
+| Cinelli, C. & Hazlett, C. (2020). "Making Sense of Sensitivity: Extending Omitted Variable Bias." *Journal of the Royal Statistical Society, Series B*, 82(1). | — | Closed-form Robustness Value (`src/satsa/moat2/sensitivity.py`), replacing DoWhy's simulation-based `add_unobserved_common_cause` refuter after that was tried and found unsuitable for this build's data — see `docs/assumptions.md` entry 009 for the full empirical account. |
 
 ## Sampling layer citations (Section 10.4, Build Order Step 9)
 
