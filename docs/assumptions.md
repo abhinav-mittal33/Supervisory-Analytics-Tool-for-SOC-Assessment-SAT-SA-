@@ -124,3 +124,36 @@ generator's own timing arithmetic while implementing the RESPONSE template, befo
 test was run against it — fixed in the generator first, then verified via an
 independent Python oracle for each OKF template asserted to agree with the
 DuckDB-compiled result (`tests/test_okf_compiler.py`).
+
+---
+
+## 005 — Metric-gaming/displacement labeling and a real statistical-power finding (resolved 2026-09-25)
+
+**Hit:** Section 9.2 says CUSUM/EWMA run in parallel on a KPI series and a linked
+invariant series should output `POTENTIAL_EXECUTION_GAP` / `POTENTIAL_DISPLACEMENT`,
+but never actually defines which label applies when — both are just named as the
+output category.
+
+**Decision:** A period where the invariant alarms DOWN with a KPI alarm UP nearby (see
+below on "nearby") is labeled `POTENTIAL_DISPLACEMENT`; a period where the invariant
+alarms DOWN with no corresponding KPI alarm is `POTENTIAL_EXECUTION_GAP`. Implemented
+in `src/satsa/moat1/drift.py::detect_displacement`.
+
+**A real design problem this surfaced, not just a labeling question:** two
+independently-run CUSUM series reacting to the *same* underlying planted window don't
+necessarily cross their own alarm thresholds on the exact same period bin — each has
+its own noise and its own accumulate/reset history. An exact-index match between
+`kpi_up` and `inv_down` alarm sets missed the planted gaming window in
+`tests/test_drift.py`'s own end-to-end test even though both series clearly showed the
+right shape on inspection. Fixed by adding a `period_tolerance` (default 1 bin) to the
+matching logic rather than forcing exact alignment.
+
+**A real statistical-power finding, not a bug:** at the dev-scale profile (300 cases),
+the escalation-duty population is so sparse per week (~1 case/week, since
+CRITICAL-severity AND HIGH/CRITICAL-asset cases are themselves a small fraction of all
+cases) that the weekly KPI rate is pure Bernoulli noise — no amount of CUSUM tuning
+recovers a signal that isn't there. The drift end-to-end test uses the *scaled* profile
+(`MATURE_CSE_SCALED_DRIFT_DEMO`) specifically for this reason. This is worth carrying
+forward honestly into the pitch: metric-gaming detection has a real minimum-exposure
+floor, just like the negative-space detector's own `MIN_PEER_GROUP_SIZE` — it isn't
+free at any population size.

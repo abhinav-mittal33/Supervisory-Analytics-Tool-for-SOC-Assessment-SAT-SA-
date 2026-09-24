@@ -9,6 +9,8 @@ requires-python = ">=3.11"
 dependencies = [
     "duckdb",
     "jsonschema",
+    "scipy",
+    "statsmodels",
 ]
 
 [project.optional-dependencies]

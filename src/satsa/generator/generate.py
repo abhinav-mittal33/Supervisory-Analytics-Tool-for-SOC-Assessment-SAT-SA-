@@ -126,7 +126,15 @@ def generate(profile: CSEProfile) -> tuple[OCEL, list[dict]]:
         severity = _weighted_choice(rng, profile.alert_severity_weights)
         category = _weighted_choice(rng, profile.alert_category_weights)
 
-        t = BASE_TIME + timedelta(hours=rng.uniform(0, 24 * 60))
+        hours_offset = rng.uniform(0, 24 * 60)
+        t = BASE_TIME + timedelta(hours=hours_offset)
+
+        in_gaming_window = profile.enable_metric_gaming and hours_offset >= (24 * 60) * (1 - profile.gaming_window_fraction)
+        effective_escalation_compliance_rate = profile.escalation_compliance_rate
+        effective_enrichment_rate = profile.enrichment_rate
+        if in_gaming_window:
+            effective_escalation_compliance_rate = min(0.99, profile.escalation_compliance_rate + profile.gaming_escalation_boost)
+            effective_enrichment_rate = max(0.0, profile.enrichment_rate - profile.gaming_enrichment_drop)
 
         ocel.events.append(Event(next_eid(), "ALERT_RAISED", t, (), (Relationship(asset_id, "alert_on_asset"),)))
         ocel.objects.append(
@@ -172,10 +180,10 @@ def generate(profile: CSEProfile) -> tuple[OCEL, list[dict]]:
         mandatory_escalation = severity == "CRITICAL" and asset_crit in ("HIGH", "CRITICAL")
         if mandatory_escalation:
             roll = rng.random()
-            if roll < profile.escalation_compliance_rate:
+            if roll < effective_escalation_compliance_rate:
                 escalate_time = t + timedelta(minutes=rng.uniform(5, 25))  # within the 30-min SLA
                 ocel.events.append(Event(next_eid(), "ESCALATE", escalate_time, (), (Relationship(case_id, "escalation_for_case"),)))
-            elif roll < profile.escalation_compliance_rate + (1 - profile.escalation_compliance_rate) / 2:
+            elif roll < effective_escalation_compliance_rate + (1 - effective_escalation_compliance_rate) / 2:
                 escalate_time = t + timedelta(minutes=rng.uniform(35, 180))  # escalated, but past the SLA
                 ocel.events.append(Event(next_eid(), "ESCALATE", escalate_time, (), (Relationship(case_id, "escalation_for_case"),)))
             # else: never escalated — the structural negative-space case (Section 9.2):
@@ -258,7 +266,7 @@ def generate(profile: CSEProfile) -> tuple[OCEL, list[dict]]:
                 }
             )
 
-        if rng.random() < profile.enrichment_rate:
+        if rng.random() < effective_enrichment_rate:
             t += timedelta(minutes=rng.uniform(10, 60))
             ocel.events.append(Event(next_eid(), "ENRICH", t, (), (Relationship(case_id, "enrich_for_case"),)))
 

@@ -7,7 +7,7 @@ Section 14.3 requires citation, not invention, and Step 2 is dev-scale-shape-onl
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 
 @dataclass(frozen=True)
@@ -26,6 +26,18 @@ class CSEProfile:
     telemetry_coverage: float  # fraction of assets that produce alerts at all (exposure)
     num_reassignment_loop_positive: int  # planted pathology count (Section 9.2, Gate 1)
     num_reassignment_loop_hard_negative: int  # matched look-alike (Section 15, Gate 1)
+
+    # Metric-gaming / displacement-within-a-cycle demo (Section 9.2, Build Order Step 7).
+    # Disabled by default so existing profiles' generated output is untouched; only a
+    # dedicated derived profile enables it (see MATURE_CSE_DEV_DRIFT_DEMO below).
+    enable_metric_gaming: bool = False
+    # 0.30 (roughly the last third of the time span, several weekly bins wide) rather
+    # than something narrower — CUSUM needs a SUSTAINED deviation across multiple
+    # periods to accumulate past its threshold; a single elevated week reads as noise
+    # indistinguishable from the rest of a Bernoulli-sampled weekly rate.
+    gaming_window_fraction: float = 0.30
+    gaming_escalation_boost: float = 0.20  # applied to escalation_compliance_rate in-window
+    gaming_enrichment_drop: float = 0.35  # applied to enrichment_rate in-window
 
 
 # Dev-scale (Build Order Step 2): shape-validation only, not yet calibrated (see docstring).
@@ -110,4 +122,23 @@ SMALL_CSE_SCALED = CSEProfile(
     telemetry_coverage=0.55,
     num_reassignment_loop_positive=20,
     num_reassignment_loop_hard_negative=20,
+)
+
+# Section 9.2 demo: same generator, same base parameters as MATURE_CSE_DEV, but with a
+# planted metric-gaming window in the last 15% of the time span — escalation-SLA
+# compliance rises there while enrichment completion quietly falls, the exact
+# "KPI up, linked invariant down" shape CUSUM/EWMA (src/satsa/moat1/drift.py) is built
+# to catch. A separate profile rather than mutating MATURE_CSE_DEV, so Gate 0/1's
+# already-passing fixtures stay untouched.
+MATURE_CSE_DEV_DRIFT_DEMO = replace(
+    MATURE_CSE_DEV, name="CSE_ALPHA_MATURE_DEV_DRIFT_DEMO", enable_metric_gaming=True
+)
+
+# The dev-scale profile's escalation-duty population (CRITICAL severity AND
+# HIGH/CRITICAL asset) is too sparse per week (~1 case/week) for a meaningful KPI
+# rate series — CUSUM can't separate a real signal from Bernoulli noise at that
+# density. The scaled profile gives a duty population large enough per week to
+# actually demonstrate the detector end to end.
+MATURE_CSE_SCALED_DRIFT_DEMO = replace(
+    MATURE_CSE_SCALED, name="CSE_ALPHA_MATURE_SCALED_DRIFT_DEMO", enable_metric_gaming=True
 )

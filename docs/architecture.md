@@ -77,3 +77,7 @@ sat-sa/
 - DuckDB's `sqlite` extension can `ATTACH` an OCEL 2.0 SQLite file directly and query
   its tables with ordinary SQL, confirmed locally before `src/satsa/okf/compiler.py`
   was built on top of it (Build Order Step 6).
+- `scipy` (BSD-3-Clause-style; PyPI classifier shows the license text directly rather
+  than an SPDX tag, but it's the well-known BSD scipy license) and `statsmodels`
+  (BSD-3-Clause) added at Build Order Step 7 for the Poisson/NB negative-space
+  regression Section 9.4 explicitly mandates — no copyleft concern, unlike entry 001.
