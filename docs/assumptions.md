@@ -295,6 +295,11 @@ implementation shortfall. What RV *does* give: a principled reason to refuse
 confidence in weak-to-moderate effects specifically, which is exactly where residual
 confounding risk matters most.
 
+**Superseded note:** the identification step described here originally went through
+DoWhy; it was later replaced with pgmpy after a real GPL-licensing discovery — see
+entry 010. The estimation/sensitivity/decision logic below is unaffected by that
+change.
+
 **Decision engine policy that follows from this:** `src/satsa/moat2/decision.py`
 outputs `ACT` only when the CI excludes zero AND RV clears a documented, conservative
 constant (`ROBUSTNESS_VALUE_THRESHOLD = 0.3`, chosen once, not fit per-scenario) —
@@ -306,3 +311,57 @@ withheld-confounder estimate's sign (reference-with-confounder=+0.099,
 without-confounder=-0.165) correctly stays below the RV bar (0.171) and returns
 `INVESTIGATE_MORE` — never presenting the flipped, wrong-signed estimate as
 actionable. `tests/test_gate3_causal_honesty.py`.
+
+---
+
+## 010 — DoWhy dropped: unconditional GPL transitive dependency (resolved 2026-09-25)
+
+**Hit:** While generating the SBOM at Build Order Step 14, `cvxopt`'s license field
+printed GPL text verbatim ("This program is free software... GNU General Public
+License... version 3"). `cvxopt` was not a direct dependency of this project — traced
+it and found it comes in via `dowhy -> dowhy.gcm -> causallearn's KCI independence
+test -> cvxopt`. Confirmed this is not optional or lazily imported: uninstalling
+`causal-learn`/`cvxopt`/`cvxpy` and running `from dowhy import CausalModel` failed
+immediately with `ModuleNotFoundError`, because `dowhy/__init__.py` unconditionally
+imports `dowhy.causal_model`, which unconditionally imports `dowhy.causal_graph`,
+which unconditionally imports `dowhy.gcm`, which unconditionally imports the KCI
+kernel-independence-test module. There is no way to `pip install dowhy` and merely
+`import CausalModel` without pulling in a GPL-3.0-or-later package.
+
+**Why this wasn't caught at Step 11:** `pip show dowhy` was checked and returned
+`License: MIT` — true for DoWhy itself, but a top-level license check is not the same
+as auditing the full transitive tree. This is exactly the same category of gap as
+entry 001 (pm4py's AGPL status was checked directly; ocpa's transitive pm4py
+dependency was checked directly; DoWhy's transitive dependency was NOT checked with
+the same rigor at the time). Lesson applied going forward: `docs/sbom.json`
+(`scripts/generate_sbom.py`) now exists specifically so every future dependency
+addition gets checked against the FULL installed tree, not just its own PyPI page.
+
+**Options considered:**
+1. Hand-write the backdoor-adjustment identification ourselves (no library).
+2. Find a better-fit, license-clean library and use that instead.
+
+**Decision:** Option 2 — **pgmpy** (MIT-licensed, confirmed via `pip show`), after
+researching current alternatives rather than defaulting straight to "write it
+ourselves": pgmpy has a dedicated `pgmpy.identification.Adjustment` class implementing
+exactly the backdoor-criterion identification this build needs (`DAG` with
+`roles={"exposures":..., "outcomes":...}` -> `.identify()` -> a verified adjustment
+set), is a better structural fit than DoWhy was (DoWhy is oriented around a much
+broader general framework — refutation methods, multiple identification strategies,
+GCM, IV, frontdoor — of which this build was actually using perhaps 5%: one
+identification call), and its full transitive dependency tree
+(`pipdeptree --packages pgmpy`) was checked end to end this time: huggingface_hub,
+networkx, numpy, pandas, scikit-learn, scipy, statsmodels, tqdm, joblib, and their own
+dependencies — all MIT/BSD/Apache, zero copyleft. `huggingface_hub`'s presence was
+specifically checked for a different concern (Section 18 air-gapped compliance, not
+licensing) by importing pgmpy's causal-inference classes with every `socket.connect`
+call monkeypatched to raise — zero network calls attempted (see
+`tests/test_offline_deployment.py`, which now covers this permanently as an automated
+regression test, not a one-time manual check).
+
+**What changed in code:** `src/satsa/moat2/causal_model.py` rewritten against pgmpy's
+`Adjustment` API instead of `dowhy.CausalModel`. `sensitivity.py` and `decision.py`
+(the closed-form Cinelli-Hazlett robustness value and the ACT/INVESTIGATE_MORE policy,
+entry 009) are completely unaffected — that logic never depended on DoWhy in the
+first place, only the identification step did. Gate 3 re-run after the swap: same
+two scenarios, same numbers, still passes (55/55 tests total).

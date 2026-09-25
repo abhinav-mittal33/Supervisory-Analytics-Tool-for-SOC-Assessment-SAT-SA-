@@ -16,7 +16,9 @@
 - **Frontend**: Streamlit (examiner UI, `src/satsa/ui/app.py`)
 - **Package manager**: pip + `pyproject.toml`, editable install (`pip install -e .`)
 - **Test runner**: pytest
-- **Key libraries**: duckdb, jsonschema, scipy, statsmodels, dowhy, streamlit — every one's license checked before use (`docs/architecture.md` "Measured facts")
+- **Key libraries**: duckdb, jsonschema, scipy, statsmodels, pgmpy, streamlit — every
+  one's license (and, since entry 010, full transitive dependency tree) checked
+  before use (`docs/architecture.md` "Measured facts", `docs/sbom.json`)
 - **Deployment target**: fully air-gapped, offline (Section 18) — no cloud, no external API calls anywhere, ever
 
 ## Folder Structure
@@ -63,11 +65,15 @@ pytest tests/test_gate0_ocel.py -v
 python scripts/build_dev_dataset.py
 python scripts/build_scaled_datasets.py
 
+# Regenerate the software bill of materials
+python scripts/generate_sbom.py
+
 # Lint / format
 (not yet set up — no linter/formatter configured)
 
 # Build / export
-(no build step — pure Python; SBOM/offline packaging is Build Order Step 14, not yet done)
+(no build step — pure Python; offline deployment verified via
+tests/test_offline_deployment.py, SBOM at docs/sbom.json)
 ```
 
 ## Architecture Summary
@@ -94,6 +100,7 @@ non-obvious decision is there with its reasoning, not just the outcome. Highligh
 |----------|--------|--------|
 | OCEL 2.0 implementation | From scratch, not pm4py/ocpa | Both carry a copyleft (AGPL/GPL) dependency unsuitable for a government deliverable — entry 001 |
 | Causal sensitivity analysis | Closed-form Cinelli-Hazlett Robustness Value, not DoWhy's own refuter | DoWhy's simulation-based refuter didn't discriminate confounded from unconfounded scenarios in this build's hands — entry 009 |
+| Causal identification library | pgmpy, not DoWhy | DoWhy's own license is MIT but its package init unconditionally pulls in GPL-3.0-or-later `cvxopt` via causal-learn — confirmed by removing it and watching the import fail — entry 010 |
 | Gate 4 metric | Per-finding-type recall, not aggregate | Aggregate recall was dominated by one numerous finding_type and actively favored the wrong baseline — entry 008 |
 | UI framework | Streamlit | Internal examiner tool, pure Python, no separate frontend build, matches global CLAUDE.md's stack preference and the air-gapped requirement (telemetry disabled via `.streamlit/config.toml`) |
 

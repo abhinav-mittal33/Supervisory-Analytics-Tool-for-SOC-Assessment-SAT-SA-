@@ -1,0 +1,631 @@
+{
+  "generated_by": "scripts/generate_sbom.py",
+  "python_version": "3.11.15 (main, Mar  3 2026, 00:52:57) [Clang 17.0.0 (clang-1700.6.3.2)]",
+  "package_count": 124,
+  "packages": [
+    {
+      "name": "altair",
+      "version": "6.3.0",
+      "license": "Copyright (c) 2015-2025, Vega-Altair Developers"
+    },
+    {
+      "name": "anyio",
+      "version": "4.15.1",
+      "license": "MIT"
+    },
+    {
+      "name": "asttokens",
+      "version": "3.0.2",
+      "license": "Apache 2.0"
+    },
+    {
+      "name": "attrs",
+      "version": "26.1.0",
+      "license": "MIT"
+    },
+    {
+      "name": "build",
+      "version": "1.6.1",
+      "license": "MIT"
+    },
+    {
+      "name": "certifi",
+      "version": "2026.7.22",
+      "license": "MPL-2.0"
+    },
+    {
+      "name": "cffi",
+      "version": "2.1.1",
+      "license": "MIT-0"
+    },
+    {
+      "name": "charset-normalizer",
+      "version": "3.5.1",
+      "license": "MIT"
+    },
+    {
+      "name": "clarabel",
+      "version": "0.11.1",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "click",
+      "version": "8.5.0",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "cloudpickle",
+      "version": "3.1.2",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "contourpy",
+      "version": "1.3.3",
+      "license": "BSD 3-Clause License"
+    },
+    {
+      "name": "cycler",
+      "version": "0.12.1",
+      "license": "Copyright (c) 2015, matplotlib project"
+    },
+    {
+      "name": "Cython",
+      "version": "3.3.0",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "deprecation",
+      "version": "2.1.0",
+      "license": "Apache 2"
+    },
+    {
+      "name": "duckdb",
+      "version": "1.5.5",
+      "license": "MIT License"
+    },
+    {
+      "name": "executing",
+      "version": "2.2.1",
+      "license": "MIT"
+    },
+    {
+      "name": "filelock",
+      "version": "4.0.3",
+      "license": "MIT"
+    },
+    {
+      "name": "fonttools",
+      "version": "4.66.0",
+      "license": "MIT"
+    },
+    {
+      "name": "formulaic",
+      "version": "1.2.2",
+      "license": "MIT"
+    },
+    {
+      "name": "fsspec",
+      "version": "2026.9.0",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "graphviz",
+      "version": "0.21",
+      "license": "MIT"
+    },
+    {
+      "name": "h11",
+      "version": "0.16.0",
+      "license": "MIT"
+    },
+    {
+      "name": "hf-xet",
+      "version": "1.6.0",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "highspy",
+      "version": "1.15.1",
+      "license": "MIT"
+    },
+    {
+      "name": "httpcore2",
+      "version": "2.13.1",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "httptools",
+      "version": "0.8.0",
+      "license": "MIT"
+    },
+    {
+      "name": "httpx2",
+      "version": "2.13.1",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "huggingface_hub",
+      "version": "2.0.0",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "idna",
+      "version": "3.20",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "iniconfig",
+      "version": "2.3.0",
+      "license": "MIT"
+    },
+    {
+      "name": "installer",
+      "version": "1.0.1",
+      "license": "MIT"
+    },
+    {
+      "name": "interface_meta",
+      "version": "2.0.1",
+      "license": "MIT"
+    },
+    {
+      "name": "intervaltree",
+      "version": "3.2.1",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "ipython",
+      "version": "9.17.1",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "ipython_pygments_lexers",
+      "version": "1.1.1",
+      "license": "BSD License"
+    },
+    {
+      "name": "itsdangerous",
+      "version": "2.2.0",
+      "license": "BSD License"
+    },
+    {
+      "name": "jedi",
+      "version": "0.20.0",
+      "license": "MIT"
+    },
+    {
+      "name": "Jinja2",
+      "version": "3.1.6",
+      "license": "BSD License"
+    },
+    {
+      "name": "joblib",
+      "version": "1.6.0",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "jsonpickle",
+      "version": "4.1.2",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "jsonschema",
+      "version": "4.26.0",
+      "license": "MIT"
+    },
+    {
+      "name": "jsonschema-specifications",
+      "version": "2025.9.1",
+      "license": "MIT"
+    },
+    {
+      "name": "kiwisolver",
+      "version": "1.5.1",
+      "license": "========================="
+    },
+    {
+      "name": "llvmlite",
+      "version": "0.49.0",
+      "license": "BSD-2-Clause AND Apache-2.0 WITH LLVM-exception"
+    },
+    {
+      "name": "lxml",
+      "version": "6.1.3",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "MarkupSafe",
+      "version": "3.0.3",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "matplotlib",
+      "version": "3.11.2",
+      "license": "License agreement for matplotlib versions 1.3.0 and later"
+    },
+    {
+      "name": "matplotlib-inline",
+      "version": "0.2.2",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "mpmath",
+      "version": "1.3.0",
+      "license": "BSD"
+    },
+    {
+      "name": "nab",
+      "version": "0.0.18",
+      "license": "MIT"
+    },
+    {
+      "name": "nab-index",
+      "version": "0.0.18",
+      "license": "MIT"
+    },
+    {
+      "name": "nab-markersets",
+      "version": "0.0.18",
+      "license": "MIT"
+    },
+    {
+      "name": "nab-project",
+      "version": "0.0.18",
+      "license": "MIT"
+    },
+    {
+      "name": "nab-provider",
+      "version": "0.0.18",
+      "license": "MIT"
+    },
+    {
+      "name": "nab-resolver",
+      "version": "0.0.18",
+      "license": "MIT"
+    },
+    {
+      "name": "narwhals",
+      "version": "2.26.0",
+      "license": "MIT"
+    },
+    {
+      "name": "networkx",
+      "version": "3.6.1",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "numba",
+      "version": "0.67.0",
+      "license": "BSD"
+    },
+    {
+      "name": "numpy",
+      "version": "2.4.6",
+      "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0"
+    },
+    {
+      "name": "opt_einsum",
+      "version": "3.4.0",
+      "license": "MIT"
+    },
+    {
+      "name": "osqp",
+      "version": "1.1.3",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "packaging",
+      "version": "26.3",
+      "license": "Apache-2.0 OR BSD-2-Clause"
+    },
+    {
+      "name": "pandas",
+      "version": "3.0.6",
+      "license": "BSD 3-Clause License"
+    },
+    {
+      "name": "parso",
+      "version": "0.8.7",
+      "license": "MIT"
+    },
+    {
+      "name": "patsy",
+      "version": "1.0.3",
+      "license": "2-clause BSD"
+    },
+    {
+      "name": "pexpect",
+      "version": "4.9.0",
+      "license": "ISC license"
+    },
+    {
+      "name": "pgmpy",
+      "version": "1.1.2",
+      "license": "The MIT License (MIT)"
+    },
+    {
+      "name": "pillow",
+      "version": "12.3.0",
+      "license": "MIT-CMU"
+    },
+    {
+      "name": "pip",
+      "version": "26.2.1",
+      "license": "MIT"
+    },
+    {
+      "name": "pipdeptree",
+      "version": "4.2.5",
+      "license": "MIT"
+    },
+    {
+      "name": "pluggy",
+      "version": "1.6.0",
+      "license": "MIT"
+    },
+    {
+      "name": "prompt_toolkit",
+      "version": "3.0.53",
+      "license": "BSD License"
+    },
+    {
+      "name": "protobuf",
+      "version": "7.36.2",
+      "license": "3-Clause BSD License"
+    },
+    {
+      "name": "psutil",
+      "version": "7.2.2",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "ptyprocess",
+      "version": "0.7.0",
+      "license": "ISC License (ISCL)"
+    },
+    {
+      "name": "pure_eval",
+      "version": "0.2.4",
+      "license": "MIT"
+    },
+    {
+      "name": "pyarrow",
+      "version": "25.0.1",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "pycparser",
+      "version": "3.0",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "pydeck",
+      "version": "0.9.3",
+      "license": "Apache License 2.0"
+    },
+    {
+      "name": "pydot",
+      "version": "4.0.1",
+      "license": "MIT"
+    },
+    {
+      "name": "pydotplus",
+      "version": "2.0.2",
+      "license": "MIT License"
+    },
+    {
+      "name": "Pygments",
+      "version": "2.21.0",
+      "license": "BSD-2-Clause"
+    },
+    {
+      "name": "pyparsing",
+      "version": "3.3.3",
+      "license": "MIT"
+    },
+    {
+      "name": "pyproject_hooks",
+      "version": "1.3.3",
+      "license": "MIT"
+    },
+    {
+      "name": "pytest",
+      "version": "9.1.1",
+      "license": "MIT"
+    },
+    {
+      "name": "python-dateutil",
+      "version": "2.9.0.post0",
+      "license": "Dual License"
+    },
+    {
+      "name": "python-multipart",
+      "version": "0.0.32",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "pytz",
+      "version": "2026.4",
+      "license": "MIT"
+    },
+    {
+      "name": "pyvis",
+      "version": "0.3.2",
+      "license": "BSD"
+    },
+    {
+      "name": "PyYAML",
+      "version": "6.0.3",
+      "license": "MIT"
+    },
+    {
+      "name": "qdldl",
+      "version": "0.1.9.post1",
+      "license": "Apache 2.0"
+    },
+    {
+      "name": "referencing",
+      "version": "0.37.0",
+      "license": "MIT"
+    },
+    {
+      "name": "requests",
+      "version": "2.34.2",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "rpds-py",
+      "version": "2026.6.3",
+      "license": "MIT"
+    },
+    {
+      "name": "satsa",
+      "version": "0.1.0",
+      "license": "UNKNOWN"
+    },
+    {
+      "name": "satsa",
+      "version": "0.1.0",
+      "license": "UNKNOWN"
+    },
+    {
+      "name": "scikit-base",
+      "version": "1.2.0",
+      "license": "BSD 3-Clause License"
+    },
+    {
+      "name": "scikit-learn",
+      "version": "1.9.1",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "scipy",
+      "version": "1.15.3",
+      "license": "Copyright (c) 2001-2002 Enthought, Inc. 2003-2024, SciPy Developers."
+    },
+    {
+      "name": "scs",
+      "version": "3.3.1",
+      "license": "MIT License"
+    },
+    {
+      "name": "setuptools",
+      "version": "82.0.0",
+      "license": "MIT"
+    },
+    {
+      "name": "six",
+      "version": "1.17.0",
+      "license": "MIT"
+    },
+    {
+      "name": "sortedcontainers",
+      "version": "2.4.0",
+      "license": "Apache 2.0"
+    },
+    {
+      "name": "sparsediffpy",
+      "version": "0.6.1",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "stack-data",
+      "version": "0.6.3",
+      "license": "MIT"
+    },
+    {
+      "name": "starlette",
+      "version": "1.7.0",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "statsmodels",
+      "version": "0.15.0",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "streamlit",
+      "version": "1.64.0",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "StringDist",
+      "version": "1.0.9",
+      "license": "MIT"
+    },
+    {
+      "name": "sympy",
+      "version": "1.14.0",
+      "license": "BSD"
+    },
+    {
+      "name": "threadpoolctl",
+      "version": "3.7.0",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "toml",
+      "version": "0.10.2",
+      "license": "MIT"
+    },
+    {
+      "name": "tomli",
+      "version": "2.4.1",
+      "license": "MIT"
+    },
+    {
+      "name": "tomli_w",
+      "version": "1.2.0",
+      "license": "MIT License"
+    },
+    {
+      "name": "tqdm",
+      "version": "4.70.1",
+      "license": "MPL-2.0 AND MIT"
+    },
+    {
+      "name": "traitlets",
+      "version": "5.16.1",
+      "license": "BSD 3-Clause License"
+    },
+    {
+      "name": "truststore",
+      "version": "0.10.4",
+      "license": "MIT"
+    },
+    {
+      "name": "typing_extensions",
+      "version": "4.16.0",
+      "license": "PSF-2.0"
+    },
+    {
+      "name": "urllib3",
+      "version": "2.8.0",
+      "license": "MIT"
+    },
+    {
+      "name": "uvicorn",
+      "version": "0.53.0",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "wcwidth",
+      "version": "0.9.1",
+      "license": "MIT License"
+    },
+    {
+      "name": "websockets",
+      "version": "16.1.1",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "wrapt",
+      "version": "2.4.1",
+      "license": "BSD-2-Clause"
+    }
+  ],
+  "licenses_needing_manual_review": [
+    "satsa",
+    "satsa"
+  ]
+}

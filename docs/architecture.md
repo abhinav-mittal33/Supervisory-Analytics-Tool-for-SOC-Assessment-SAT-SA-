@@ -81,12 +81,27 @@ sat-sa/
   than an SPDX tag, but it's the well-known BSD scipy license) and `statsmodels`
   (BSD-3-Clause) added at Build Order Step 7 for the Poisson/NB negative-space
   regression Section 9.4 explicitly mandates — no copyleft concern, unlike entry 001.
-- `dowhy` 0.14 confirmed MIT-licensed, added at Build Order Step 11 for formal causal
-  identification. Its own simulation-based sensitivity refuter was evaluated and
-  found unsuitable for this build's data (see docs/assumptions.md entry 009) — the
-  numeric estimate/CI and the sensitivity analysis itself are implemented directly
-  (statsmodels OLS + the closed-form Cinelli-Hazlett Robustness Value) rather than
-  through DoWhy's own estimator/refuter wrappers.
+- `dowhy` 0.14, used at Build Order Step 11 for formal causal identification,
+  **dropped at Step 14**: its own license is MIT, but its package `__init__` chain
+  unconditionally imports `causal-learn`, which requires `cvxopt`
+  (GPL-3.0-or-later) — confirmed by removing those packages and watching
+  `from dowhy import CausalModel` fail outright, not something avoidable while still
+  using DoWhy at all (docs/assumptions.md entry 010). Replaced with **pgmpy** 1.1.2
+  (MIT, full transitive tree checked via `pipdeptree` — zero copyleft, see
+  docs/sbom.json) for the identification step. The numeric estimate/CI and the
+  sensitivity analysis itself remain statsmodels OLS + the closed-form
+  Cinelli-Hazlett Robustness Value (docs/assumptions.md entry 009), unaffected by the
+  swap.
+- `pgmpy`'s dependency on `huggingface_hub` was specifically checked for outbound
+  network calls (a Section 18 concern, not a licensing one) by monkeypatching every
+  `socket.connect` to raise while running pgmpy's causal-inference classes — zero
+  network calls attempted. Covered permanently by `tests/test_offline_deployment.py`.
+- `docs/sbom.json` (`scripts/generate_sbom.py`) — a full software bill of materials
+  generated from the actual installed virtualenv (`importlib.metadata`, not
+  hand-maintained), added at Build Order Step 14 specifically because the DoWhy/cvxopt
+  discovery showed a single package's own license page isn't enough — the full
+  transitive tree needs checking. 124 packages as of last generation, zero
+  GPL/AGPL/LGPL.
 - `streamlit` 1.64 confirmed Apache-2.0-licensed, added at Build Order Step 13 for the
   examiner UI. Verified it makes no external network calls by disabling its
   usage-telemetry ping (`.streamlit/config.toml`, `gatherUsageStats = false`) — a real

@@ -84,3 +84,21 @@ Weakening a test to make a gate pass is a regression, not a fix (Section 1, item
 - **Gate 5 [optional].** Only if the temporal axis (Section 13) is attempted: correctly
   distinguishes `VERIFIED_IMPROVEMENT` / `POTENTIAL_DISPLACEMENT` / `REGRESSED` /
   `INSUFFICIENT_EVIDENCE`. **Status: deferred, cut first under time pressure.**
+
+## Offline deployment verification (Section 18, Build Order Step 14)
+
+Not a numbered gate, but a hard requirement. **Status: PASSED, 2026-09-25**
+(`tests/test_offline_deployment.py`) — the full pipeline (generate -> OCEL ->
+OKF/DuckDB -> Moat 1 fusion -> sampling/submodular selection -> Moat 2 causal
+estimation) runs to completion with every `socket.connect`/`connect_ex` call
+monkeypatched to raise immediately. Chosen over a manual real-network-disconnect test
+because this session has no safe, reversible way to toggle a shared machine's network
+interface, and the programmatic block is strictly more rigorous — it catches an
+attempted connection instantly rather than relying on a timeout or a silently-caught
+exception going unnoticed. This is also the check that would have caught
+`huggingface_hub` (a pgmpy dependency — see `docs/assumptions.md` entry 010) trying to
+phone home, had it done so; it doesn't.
+
+A software bill of materials (`docs/sbom.json`, `scripts/generate_sbom.py`) covers 124
+installed packages, zero GPL/AGPL/LGPL among them — generated directly from the
+virtualenv's own package metadata, not hand-maintained.

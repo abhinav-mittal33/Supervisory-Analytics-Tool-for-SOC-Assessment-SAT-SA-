@@ -46,13 +46,18 @@ cases/CSE, ~50 assets/CSE" instruction, and are structurally distinct (different
 analyst/queue counts, different severity/criticality distributions, different
 escalation/enrichment/telemetry rates) rather than the same generator reseeded.
 
-## Causal engine (Section 12 / Moat 2) — Build Order Step 11
+## Causal engine (Section 12 / Moat 2) — Build Order Step 11, revised Step 14
 
 | Library / Citation | License | Role |
 |---|---|---|
-| DoWhy 0.14 | MIT (confirmed via `pip show dowhy`) | Formal causal identification (`CausalModel.identify_effect`) — documents the estimand and its unconfoundedness assumption explicitly, per Section 12. |
-| `statsmodels` OLS | BSD-3-Clause (already in use, Step 7) | The numeric effect estimate, confidence interval, and t-statistic/df feeding the robustness value — chosen over DoWhy's own estimator wrapper for reliable CI/sensitivity-input access. |
+| `pgmpy` 1.1.2 (confirmed via `pip show pgmpy`; full transitive tree checked via `pipdeptree`, zero copyleft — `docs/sbom.json`) | MIT | Formal causal identification (`pgmpy.identification.Adjustment`) — verifies the backdoor adjustment set and documents the estimand/unconfoundedness assumption, per Section 12. Replaces DoWhy — see `docs/assumptions.md` entry 010 for why (DoWhy unconditionally pulls in GPL-3.0-or-later `cvxopt` through its own package init). |
+| `statsmodels` OLS | BSD-3-Clause (already in use, Step 7) | The numeric effect estimate, confidence interval, and t-statistic/df feeding the robustness value. |
 | Cinelli, C. & Hazlett, C. (2020). "Making Sense of Sensitivity: Extending Omitted Variable Bias." *Journal of the Royal Statistical Society, Series B*, 82(1). | — | Closed-form Robustness Value (`src/satsa/moat2/sensitivity.py`), replacing DoWhy's simulation-based `add_unobserved_common_cause` refuter after that was tried and found unsuitable for this build's data — see `docs/assumptions.md` entry 009 for the full empirical account. |
+
+~~DoWhy 0.14~~ — evaluated at Step 11, dropped at Step 14. Its own license is MIT, but
+`from dowhy import CausalModel` unconditionally imports `causal-learn`, which requires
+`cvxopt` (GPL-3.0-or-later) — confirmed by removing those packages and watching the
+import fail outright. See `docs/assumptions.md` entry 010.
 
 ## Sampling layer citations (Section 10.4, Build Order Step 9)
 
