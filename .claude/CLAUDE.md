@@ -147,6 +147,7 @@ None. Fully local/offline — no API keys, no external services, no `.env` file 
 | `docs/ontology.md` | The verdict taxonomy, Anomaly->Finding->Concern, ABSTAIN reasons |
 | `docs/expected_authority.md` | OKF authority classes, per-finding-type confidence sourcing |
 | `docs/assumptions.md` | **Read this first** — every loophole, every real bug found during a gate, every design decision with its reasoning |
+| `docs/plan_vs_actual.md` | One-page delta view — what was planned vs. built, every library swap and why, every formula actually shipped, every test-design correction |
 | `docs/validation_plan.md` | Which gates have passed, with the actual numbers |
 | `docs/references.md` | Every external citation/dataset/library, with license and exact quote |
 
