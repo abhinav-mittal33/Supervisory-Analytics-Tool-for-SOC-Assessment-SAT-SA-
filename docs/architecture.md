@@ -87,3 +87,10 @@ sat-sa/
   numeric estimate/CI and the sensitivity analysis itself are implemented directly
   (statsmodels OLS + the closed-form Cinelli-Hazlett Robustness Value) rather than
   through DoWhy's own estimator/refuter wrappers.
+- `streamlit` 1.64 confirmed Apache-2.0-licensed, added at Build Order Step 13 for the
+  examiner UI. Verified it makes no external network calls by disabling its
+  usage-telemetry ping (`.streamlit/config.toml`, `gatherUsageStats = false`) — a real
+  requirement given Section 18's air-gapped deployment constraint, not a cosmetic
+  setting. The full UI (all three tabs, verdict submission with conditional required
+  fields, cost override, review timer, audit trail) was launched and driven with a
+  real browser (Playwright) before being reported as working — not just unit-tested.

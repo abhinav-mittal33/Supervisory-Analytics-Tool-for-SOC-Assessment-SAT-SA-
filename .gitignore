@@ -9,3 +9,4 @@ data/scaled/*.sqlite
 data/scaled/*.json
 .DS_Store
 .env
+.playwright-mcp/

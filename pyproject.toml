@@ -12,6 +12,7 @@ dependencies = [
     "scipy",
     "statsmodels",
     "dowhy",
+    "streamlit",
 ]
 
 [project.optional-dependencies]
