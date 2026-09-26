@@ -11,3 +11,9 @@ data/portfolio_history/
 .DS_Store
 .env
 .playwright-mcp/
+
+# local-only, never on GitHub (internal process docs / agent config)
+.claude/
+agent_docs/
+docs/
+codex.md
