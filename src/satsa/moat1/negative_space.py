@@ -87,7 +87,18 @@ def detect_negative_space(
             NegativeSpaceFinding(o.group_id, o.exposure, o.observed, float("nan"), float("nan"), float("nan"), False, None, "INSUFFICIENT_EVIDENCE")
             for o in observations
         ]
-    pooled_rate, ci_low_rate, ci_high_rate = _fit_pooled_rate(fittable, alpha)
+    try:
+        pooled_rate, ci_low_rate, ci_high_rate = _fit_pooled_rate(fittable, alpha)
+    except ValueError:
+        # A tiny, extreme sample (e.g. exactly 2 peer groups, one with observed=0)
+        # can push statsmodels' IRLS into genuine non-convergence — a real ValueError,
+        # not just the usual PerfectSeparationWarning. Caught here and treated the
+        # same as any other "not enough evidence to fit a baseline" case: abstain,
+        # never let a degenerate fit take the whole page down.
+        return [
+            NegativeSpaceFinding(o.group_id, o.exposure, o.observed, float("nan"), float("nan"), float("nan"), False, None, "INSUFFICIENT_EVIDENCE")
+            for o in observations
+        ]
 
     findings = []
     for o in observations:

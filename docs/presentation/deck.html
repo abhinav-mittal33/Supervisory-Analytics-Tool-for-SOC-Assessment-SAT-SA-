@@ -1,0 +1,364 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>SAT-SA deck</title>
+<style>
+  @page { size: 1440pt 810pt; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { font-family: Arial, Helvetica, sans-serif; }
+  .page {
+    width: 1440pt; height: 810pt; position: relative; background:#fff; overflow:hidden;
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* ---- shared master (pages 2-6) ---- */
+  .badge {
+    position:absolute; left:40pt; top:26pt; width:150pt; height:60pt;
+    border:2pt solid #7a5fb0; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:15pt; color:#3c2f66;
+  }
+  .page-title {
+    position:absolute; top:34pt; left:0; right:0; text-align:center;
+    font-size:30pt; font-weight:700; letter-spacing:0.5pt; color:#111;
+  }
+  .sih-logo {
+    position:absolute; right:36pt; top:20pt; width:150pt; text-align:center; font-size:9pt; color:#2e3a46; font-weight:700;
+  }
+  .sih-logo .mark { width:64pt; height:64pt; margin:0 auto 4pt; border-radius:14pt;
+    background: linear-gradient(90deg,#e8792a 50%, #2a8a4a 50%); position:relative; }
+  .footer {
+    position:absolute; left:0; right:0; bottom:0; height:46pt; background:#1663b4;
+    color:#fff; display:flex; align-items:center; justify-content:center; font-size:11pt;
+  }
+  .footer .pageno { position:absolute; right:28pt; font-weight:700; }
+  .content { position:absolute; left:40pt; right:40pt; top:110pt; bottom:70pt; }
+
+  /* ---- page 1 ---- */
+  .p1-masthead { font-family: "Times New Roman", Times, serif; font-weight:700; font-size:44pt;
+    color:#17325c; position:absolute; left:36pt; top:26pt; letter-spacing:1pt; }
+  .p1-watermark { position:absolute; right:60pt; top:110pt; width:340pt; height:340pt; opacity:0.5; }
+  .p1-brainmark { position:absolute; right:40pt; top:24pt; width:120pt; text-align:center; font-size:9pt; font-weight:700; color:#2e3a46; }
+  .p1-bullets { position:absolute; left:60pt; top:170pt; width:760pt; }
+  .p1-bullets li { font-size:22pt; font-weight:700; color:#111; margin-bottom:26pt; list-style:none; padding-left:30pt; position:relative; line-height:1.3;}
+  .p1-bullets li:before { content:"•"; position:absolute; left:0; top:-4pt; font-size:26pt; }
+  .p1-bullets .val { font-weight:400; }
+  .placeholder { color:#b0271b; }
+
+  /* ---- page 2 ---- */
+  .p2-sub { position:absolute; left:56pt; top:100pt; font-size:20pt; color:#1663b4; font-weight:700; }
+  .p2-bands { position:absolute; left:56pt; top:150pt; width:800pt; }
+  .band { background:#dcd9ec; border-radius:26pt; padding:16pt 26pt; margin-bottom:16pt; font-size:15pt; color:#222; text-align:center; line-height:1.35; }
+  .band b { color:#c0392b; }
+  .p2-illustration { position:absolute; right:56pt; top:150pt; width:420pt; height:560pt; }
+
+  /* ---- page 3 ---- */
+  .p3-stack { position:absolute; left:36pt; top:104pt; width:250pt; font-size:13pt; }
+  .p3-stack h4 { color:#1663b4; font-size:14pt; margin:0 0 8pt; }
+  .p3-stack ol { padding-left:16pt; margin:0 0 14pt; }
+  .p3-stack li { margin-bottom:6pt; }
+  .p3-logos { display:flex; flex-wrap:wrap; gap:8pt; margin-top:6pt; }
+  .p3-logos div { border:1pt solid #ccc; border-radius:4pt; padding:4pt 6pt; font-size:9pt; }
+  .p3-divider { position:absolute; left:300pt; top:104pt; bottom:80pt; width:2pt; background:#111; }
+  .p3-links { position:absolute; left:36pt; bottom:56pt; font-size:9pt; color:#1663b4; }
+  .p3-flow { position:absolute; left:320pt; top:100pt; right:36pt; bottom:56pt; font-size:9pt; }
+  .fbox { border:1.4pt solid #222; border-radius:6pt; padding:5pt 8pt; background:#fff; position:absolute; text-align:center; }
+  .fbox.rej { border-color:#c0392b; color:#c0392b; }
+  .fbox.warn { border-color:#b8860b; color:#8a6100; }
+  svg.arrows { position:absolute; left:320pt; top:100pt; right:36pt; bottom:56pt; width: calc(100% - 356pt); height: calc(100% - 156pt); overflow:visible; }
+
+  /* ---- page 4 ---- */
+  table.p4 { width:100%; border-collapse:collapse; font-size:11.5pt; table-layout:fixed; }
+  table.p4 th, table.p4 td { border:1.6pt solid #111; padding:8pt 10pt; vertical-align:top; }
+  table.p4 th:nth-child(1), table.p4 td:nth-child(1) { background:#aeeef2; }
+  table.p4 th:nth-child(2), table.p4 td:nth-child(2) { background:#ff8a80; }
+  table.p4 th:nth-child(3), table.p4 td:nth-child(3) { background:#fbdfe6; }
+  .p4-lead { color:#1663b4; font-weight:700; margin-top:14pt; font-size:13pt; }
+  .p4-bullets { color:#1663b4; font-size:11.5pt; padding-left:20pt; }
+
+  /* ---- page 5 ---- */
+  .p5-cols { display:flex; gap:24pt; height: 430pt; }
+  .p5-panel { flex:1; border-radius:22pt; padding:36pt 22pt 16pt; position:relative; font-size:11pt; }
+  .p5-panel.pink { background:#fbd9e4; }
+  .p5-panel.cyan { background:#c9eff4; }
+  .p5-tab { position:absolute; top:-16pt; left:24pt; background:#fff; border-radius:20pt; padding:8pt 20pt;
+    font-weight:700; font-size:13pt; border:2pt solid; border-image: linear-gradient(90deg,#ff8fb1,#ffe08a) 1; }
+  .p5-panel ol { padding-left:16pt; margin:6pt 0; }
+  .p5-panel ol > li { margin-bottom:6pt; }
+  .p5-panel .h { color:#1a7a3a; font-weight:700; }
+  .p5-divider { border-left:2pt dashed #333; height:430pt; }
+  .p5-bottom { display:flex; gap:16pt; margin-top:14pt; height:150pt; }
+  .p5-bottom > div { flex:1; border:1pt solid #ccc; border-radius:6pt; padding:8pt; font-size:8.5pt; overflow:hidden; }
+
+  /* ---- page 6 ---- */
+  table.p6 { width:100%; border-collapse:collapse; font-size:10.5pt; }
+  table.p6 th { background:#18c3da; color:#fff; padding:6pt 8pt; border:1pt solid #111; text-align:left; }
+  table.p6 td { background:#cdf4f8; padding:6pt 8pt; border:1pt solid #111; }
+  .p6-refs { font-size:9pt; margin-top:14pt; }
+  .p6-refs a { color:#1663b4; }
+  .p6-dataset { font-size:9.5pt; margin-top:10pt; }
+</style></head>
+<body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="page">
+  <div class="p1-masthead">SMART&nbsp;&nbsp;INDIA&nbsp;&nbsp;HACKATHON&nbsp;&nbsp;2026</div>
+  <div class="p1-brainmark">
+    <svg width="90" height="70" viewBox="0 0 90 70"><rect x="2" y="2" width="86" height="66" rx="10" fill="#fff" stroke="#dadada"/>
+    <path d="M20 40 q0 -22 20 -22 q20 0 20 22 q0 14 -20 14 q-20 0 -20 -14z" fill="#e8792a"/>
+    <path d="M50 18 q20 0 20 22 q0 14 -20 14z" fill="#2a8a4a"/>
+    <rect x="38" y="52" width="14" height="6" fill="#2e3a46"/></svg>
+    SIH 2026
+  </div>
+  <svg class="p1-watermark" viewBox="0 0 340 340"><polygon points="170,10 320,90 320,250 170,330 20,250 20,90" fill="#ececec"/></svg>
+  <ul class="p1-bullets">
+    <li><b>PS ID:</b> <span class="val placeholder">[verify SIH 2026 portal &mdash; previously observed SIH26157]</span></li>
+    <li><b>PS Title:</b> <span class="val">Supervisory Analytics Tool for SOC Assessment (SAT-SA)</span></li>
+    <li><b>Theme:</b> <span class="val placeholder">[verify portal &mdash; previously observed Blockchain &amp; Cybersecurity]</span></li>
+    <li><b>Category:</b> <span class="val">Software <span class="placeholder">[verify]</span></span></li>
+    <li><b>Team ID:</b> <span class="val placeholder">[actual submission ID]</span></li>
+    <li><b>Team Name:</b> <span class="val placeholder">[actual registered team name]</span></li>
+  </ul>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+  <div class="badge">SAT&#8209;SA</div>
+  <div class="page-title">SUPERVISORY ANALYTICS TOOL FOR SOC ASSESSMENT</div>
+  <div class="sih-logo"><div class="mark"></div>SIH 2026</div>
+  <div class="p2-sub">Proposed Solution (Describe your Idea/Solution/Prototype)</div>
+  <div class="p2-bands">
+    <div class="band">Periodic CSV, JSON and SQLite case submissions from <b>multiple CSEs</b> become a common object-centric event record.</div>
+    <div class="band">Moat 1 joins explicit operational rules with structural anomalies and <b>execution gaps + negative space</b> peer baselines.</div>
+    <div class="band">Each flagged issue opens an <b>explainable finding</b>: exact case, events, rule, rationale, provenance and review cost.</div>
+    <div class="band">A budgeted review plan selects <b>diverse evidence</b> across capabilities instead of repeating the same easy cases.</div>
+    <div class="band">Moat 2 asks whether a proposed intervention plausibly helps; uncertain estimates return to the <b>human examiner</b>.</div>
+  </div>
+  <svg class="p2-illustration" viewBox="0 0 420 560">
+    <path d="M210 60 L340 110 L340 300 Q340 420 210 480 Q80 420 80 300 L80 110 Z" fill="#2f6fed" opacity="0.9"/>
+    <rect x="150" y="220" width="120" height="80" rx="6" fill="#fff"/>
+    <rect x="160" y="230" width="100" height="55" rx="3" fill="#dbe7ff"/>
+    <rect x="175" y="300" width="70" height="8" rx="2" fill="#fff"/>
+    <g font-size="11" font-weight="700" fill="#1a1a1a" text-anchor="middle" font-family="Arial">
+      <circle cx="60" cy="90" r="34" fill="#ffd54f"/><text x="60" y="94">Detect</text>
+      <circle cx="360" cy="90" r="34" fill="#4fc3f7"/><text x="360" y="94">Ingest</text>
+      <circle cx="30" cy="280" r="34" fill="#81c784"/><text x="30" y="284">Compare</text>
+      <circle cx="390" cy="280" r="34" fill="#ba68c8"/><text x="390" y="284" font-size="9.5">Investigate</text>
+      <circle cx="70" cy="470" r="34" fill="#ff8a65"/><text x="70" y="474">Review</text>
+      <circle cx="350" cy="470" r="34" fill="#4db6ac"/><text x="350" y="474">Audit</text>
+    </g>
+  </svg>
+  <div class="footer">@SIH Idea submission &mdash; Template<div class="pageno">2</div></div>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page">
+  <div class="badge">SAT&#8209;SA</div>
+  <div class="page-title">TECHNICAL APPROACH</div>
+  <div class="sih-logo"><div class="mark"></div>SIH 2026</div>
+  <div class="p3-stack">
+    <h4>Techstack Used:</h4>
+    <ol>
+      <li>Python 3.11+ &mdash; application and analytics</li>
+      <li>Streamlit &mdash; local examiner UI</li>
+      <li>DuckDB &mdash; SQL rule evaluation</li>
+      <li>OCEL 2.0 &mdash; in-house event/object model</li>
+      <li>SQLite &mdash; local batches and OCEL files</li>
+      <li>statsmodels + SciPy &mdash; peer/causal statistics</li>
+      <li>pgmpy &mdash; causal adjustment DAG</li>
+      <li>jsonschema + pytest &mdash; schema/test checks</li>
+    </ol>
+    <div class="p3-logos">
+      <div>Python</div><div>Streamlit</div><div>DuckDB</div><div>SQLite</div>
+      <div>OCEL 2.0</div><div>statsmodels</div><div>pgmpy</div><div>pytest</div>
+    </div>
+  </div>
+  <div class="p3-divider"></div>
+  <div class="p3-links">
+    Prototype: <span class="placeholder">[actual offline build/repository link]</span><br/>
+    Live offline prototype available for demonstration.
+  </div>
+  <div class="p3-flow">
+    <div class="fbox" style="left:0pt; top:0pt; width:130pt;">CSE A...N periodic exports</div>
+    <div class="fbox" style="left:0pt; top:44pt; width:130pt;">CSV | JSON | SQLite</div>
+    <div class="fbox" style="left:0pt; top:88pt; width:130pt; font-size:8pt;">optional JSON API adapter (code only)</div>
+    <div class="fbox" style="left:160pt; top:44pt; width:150pt;">Field mapping + quality gate</div>
+    <div class="fbox rej" style="left:160pt; top:-2pt; width:150pt; font-size:8pt;">missing cases/case_events &rarr; stop + errors</div>
+    <div class="fbox warn" style="left:160pt; top:92pt; width:150pt; font-size:8pt;">unknown event &rarr; skip, downgrade evidence</div>
+    <div class="fbox" style="left:340pt; top:44pt; width:150pt;">Normalise to OCEL 2.0</div>
+    <div class="fbox" style="left:520pt; top:44pt; width:170pt;">Local OCEL SQLite + dated batch manifest</div>
+
+    <div class="fbox" style="left:520pt; top:120pt; width:170pt;">DuckDB OKF rule SQL</div>
+    <div class="fbox" style="left:520pt; top:164pt; width:170pt;">Structural detectors</div>
+    <div class="fbox" style="left:520pt; top:208pt; width:170pt;">Peer negative-space GLM</div>
+    <div class="fbox" style="left:520pt; top:252pt; width:170pt;">Temporal history/drift (separate)</div>
+
+    <div class="fbox" style="left:730pt; top:142pt; width:170pt;">Moat 1 case fusion &rarr; Evidence Packages</div>
+    <div class="fbox" style="left:730pt; top:208pt; width:170pt; font-size:8pt;">Portfolio peer/risk view</div>
+    <div class="fbox" style="left:730pt; top:252pt; width:170pt; font-size:8pt;">Trend view</div>
+
+    <div class="fbox" style="left:940pt; top:100pt; width:160pt;">Finding detail + timeline + evidence</div>
+    <div class="fbox" style="left:940pt; top:150pt; width:160pt;">Review-cost + coverage sampler &rarr; review plan</div>
+    <div class="fbox" style="left:940pt; top:200pt; width:160pt;">Human examiner verdict + notes</div>
+
+    <div class="fbox" style="left:1140pt; top:200pt; width:170pt;">Confirmed &rarr; Moat 2 observational analysis</div>
+    <div class="fbox" style="left:1140pt; top:250pt; width:170pt; font-size:8pt;">pgmpy adjustment &rarr; OLS 95% CI &rarr; sensitivity</div>
+    <div class="fbox" style="left:1140pt; top:296pt; width:170pt; font-weight:700;">ACT / INVESTIGATE_MORE</div>
+    <div class="fbox" style="left:940pt; top:296pt; width:160pt; font-size:8pt;" >Preliminary entity-wide estimate &rarr; HTML report (dashed, no verdict needed)</div>
+
+    <div class="fbox" style="left:340pt; top:340pt; width:150pt; font-size:8pt;">Outputs: offline UI &middot; evidence JSON &middot; self-contained HTML report &middot; dated local history</div>
+    <svg width="1080" height="400" style="position:absolute; left:0; top:0; overflow:visible; pointer-events:none;">
+      <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#222"/></marker></defs>
+      <g stroke="#222" stroke-width="1.2" fill="none" marker-end="url(#ah)">
+        <path d="M130,15 L160,58"/>
+        <path d="M130,59 L160,59"/>
+        <path d="M130,103 L160,103"/>
+        <path d="M310,59 L340,59"/>
+        <path d="M490,59 L520,59"/>
+        <path d="M690,59 L720,88 L720,128"/>
+        <path d="M690,144 L720,166"/>
+        <path d="M690,188 L720,222"/>
+        <path d="M690,232 L720,266"/>
+        <path d="M900,152 L928,152"/>
+        <path d="M900,216 L928,216"/>
+        <path d="M900,260 L928,260"/>
+        <path d="M1100,166 L1128,120"/>
+        <path d="M1100,166 L1128,166"/>
+        <path d="M1100,166 L1128,216"/>
+        <path d="M1290,216 L1328,216"/>
+        <path d="M1290,216 L1128,296" stroke-dasharray="4 3"/>
+      </g>
+    </svg>
+  </div>
+  <div class="footer">@SIH Idea submission &mdash; Template<div class="pageno">3</div></div>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+  <div class="badge">SAT&#8209;SA</div>
+  <div class="page-title">FEASIBILITY AND VIABILITY</div>
+  <div class="sih-logo"><div class="mark"></div>SIH 2026</div>
+  <div class="content" style="top:104pt;">
+    <table class="p4">
+      <tr><th>Feasibility dimension</th><th>Current evidence / workable route</th><th>Constraint and mitigation</th></tr>
+      <tr>
+        <td><b>Technical / offline</b></td>
+        <td>Python, Streamlit, DuckDB, SQLite and statistical packages run locally. CSV/JSON/SQLite imports, OCEL conversion, rules, findings, review plan, history and HTML/JSON exports are implemented.</td>
+        <td>Prepackage wheels, DuckDB SQLite extension and assets for a sealed network. Verify a clean-machine offline install. No cloud service or model API belongs in the runtime path.</td>
+      </tr>
+      <tr>
+        <td><b>Scale / accuracy</b></td>
+        <td>Multiple CSEs/batches work in prototype. Synthetic gates test OCEL integrity, planted patterns, fusion hard negatives, sampling diversity and causal abstention.</td>
+        <td>Current benchmarks are small synthetic profiles, not national-scale proof. Optimise ingestion/indexing and sampler for high finding counts; validate precision/recall against blinded manual reviews.</td>
+      </tr>
+      <tr>
+        <td><b>Data / governance</b></td>
+        <td>Minimum case and case-event exports support the core assessment; alerts/assets/analysts/queues enrich findings. Unknown event values are skipped with an evidence-quality downgrade.</td>
+        <td>Comparable asset/queue exposure, mapping quality and verified authority are needed for some peer/negative-space claims. Abstain or label provisional when evidence is inadequate.</td>
+      </tr>
+    </table>
+    <div class="p4-lead">Deployment and validation plan</div>
+    <ul class="p4-bullets">
+      <li>Air-gapped workstation/server; local processing and static reports.</li>
+      <li>Back-test on expert-reviewed CSE submissions with per-type precision, recall and review-time measures.</li>
+      <li>Scale-test by entity count, period count, event volume and concern count before operational release.</li>
+    </ul>
+  </div>
+  <div class="footer">@SIH Idea submission &mdash; Template<div class="pageno">4</div></div>
+</div>
+
+<!-- ============ PAGE 5 ============ -->
+<div class="page">
+  <div class="badge">SAT&#8209;SA</div>
+  <div class="page-title">IMPACT AND BENEFITS</div>
+  <div class="sih-logo"><div class="mark"></div>SIH 2026</div>
+  <div class="content" style="top:100pt;">
+    <div class="p5-cols">
+      <div class="p5-panel pink">
+        <div class="p5-tab">Supervisory impact</div>
+        <ol>
+          <li><span class="h">Find where to look.</span> Rank CSEs and surface evidence gaps across comparable submissions.</li>
+          <li><span class="h">Inspect the full record.</span> Open a finding to see rule, affected case/asset, supporting events, timeline and evidence quality.</li>
+          <li><span class="h">Use review hours well.</span> Select varied findings under an examiner-set time budget.</li>
+          <li><span class="h">Keep judgement visible.</span> Record a verdict and notes; an uncertain intervention stays under investigation.</li>
+        </ol>
+      </div>
+      <div class="p5-divider"></div>
+      <div class="p5-panel cyan">
+        <div class="p5-tab">Practical benefits</div>
+        <ol>
+          <li><span class="h">Across entities and periods.</span> Five synthetic demo CSEs plus imported dated batches, navigated in one local UI.</li>
+          <li><span class="h">Explainable by design.</span> Evidence JSON and standalone HTML reports expose the basis of each conclusion.</li>
+          <li><span class="h">Offline deployment fit.</span> No SaaS or externally hosted model is used by the implemented pipeline.</li>
+          <li><span class="h">Broader sampling.</span> Coverage-based selection reduces repeated review of near-duplicate finding types in tests.</li>
+        </ol>
+      </div>
+    </div>
+    <div class="p5-bottom">
+      <div>
+        <b style="font-size:9pt;">Per-type recall @ 30% budget (n=355, synthetic demo)</b>
+        <div style="display:flex; align-items:flex-end; height:90pt; gap:6pt; margin-top:6pt;">
+          <div style="display:flex; flex-direction:column; align-items:center;"><div style="width:14pt; height:80pt; background:#1663b4;"></div><span style="font-size:7pt;">Loop&#10;sampler 100%</span></div>
+          <div style="display:flex; flex-direction:column; align-items:center;"><div style="width:14pt; height:2pt; background:#ff8a80;"></div><span style="font-size:7pt;">Loop&#10;baseline 0%</span></div>
+          <div style="display:flex; flex-direction:column; align-items:center;"><div style="width:14pt; height:80pt; background:#1663b4;"></div><span style="font-size:7pt;">Esc 100%/100%</span></div>
+          <div style="display:flex; flex-direction:column; align-items:center;"><div style="width:14pt; height:80pt; background:#ff8a80;"></div><span style="font-size:7pt;">&nbsp;</span></div>
+          <div style="display:flex; flex-direction:column; align-items:center;"><div style="width:14pt; height:13pt; background:#1663b4;"></div><span style="font-size:7pt;">Enrich sampler 16%</span></div>
+          <div style="display:flex; flex-direction:column; align-items:center;"><div style="width:14pt; height:21pt; background:#ff8a80;"></div><span style="font-size:7pt;">baseline 27%</span></div>
+        </div>
+        <div style="font-size:6.5pt; color:#555; margin-top:4pt;">synthetic test; B=2902 min; blue=coverage sampler, red=top-score baseline. tests/test_gate4_sampling.py</div>
+      </div>
+      <div style="text-align:center;">
+        <b style="font-size:9pt;">Findings by capability (n=355, same run)</b>
+        <div style="width:90pt; height:90pt; margin:6pt auto 0; border-radius:50%;
+          background:conic-gradient(#1663b4 0% 7%, #00703c 7% 13.5%, #b58840 13.5% 99.7%, #c0392b 99.7% 100%);
+          position:relative;">
+          <div style="position:absolute; inset:22pt; background:#fff; border-radius:50%;"></div>
+        </div>
+        <div style="font-size:7pt; text-align:left; margin-top:4pt;">
+          <span style="color:#1663b4;">&#9632;</span> Operational Discipline 25 &nbsp;
+          <span style="color:#00703c;">&#9632;</span> Escalation 23<br/>
+          <span style="color:#b58840;">&#9632;</span> Investigation 306 &nbsp;
+          <span style="color:#c0392b;">&#9632;</span> Threat Detection 1
+        </div>
+      </div>
+      <div>
+        <b style="font-size:9pt;">Live examiner UI (Companies &rarr; batch &rarr; finding)</b>
+        <img src="ui_mock.png" style="width:100%; height:100pt; object-fit:cover; object-position: top; margin-top:4pt; border:1pt solid #ccc;"/>
+        <div style="color:#c0392b; font-size:7pt; font-weight:700;">Human examiner controls the decision</div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">@SIH Idea submission &mdash; Template<div class="pageno">5</div></div>
+</div>
+
+<!-- ============ PAGE 6 ============ -->
+<div class="page">
+  <div class="badge">SAT&#8209;SA</div>
+  <div class="page-title">RESEARCH AND REFERENCES</div>
+  <div class="sih-logo"><div class="mark"></div>SIH 2026</div>
+  <div class="content" style="top:100pt;">
+    <b>Research Survey</b>
+    <table class="p6">
+      <tr><th>Prior approach / source</th><th>What it contributes</th><th>SAT-SA treatment and limit</th></tr>
+      <tr><td>Manual alert sampling and policy/KPI review</td><td>Expert judgement and rich context; costly and inconsistent at scale.</td><td>Evidence-first ranking and diverse sampling assist examiners; manual verdict remains final.</td></tr>
+      <tr><td>OCEL 2.0 standard</td><td>Models one event related to several objects.</td><td>In-house OCEL 2.0 model links cases, alerts, analysts, assets and queues.</td></tr>
+      <tr><td>Sviridenko (2004); Badanidiyuru&ndash;Vondr&aacute;k (2014)</td><td>Diminishing-return coverage, budgeted selection.</td><td>Bounded-seed threshold-greedy heuristic; full formal guarantee does not transfer to the capped 12-item seed pool.</td></tr>
+      <tr><td>Poisson GLM (statsmodels)</td><td>Exposure-normalised expected counts and uncertainty.</td><td>Peer negative-space screen with abstention on inadequate evidence.</td></tr>
+      <tr><td>Cinelli&ndash;Hazlett sensitivity; pgmpy adjustment</td><td>Observational-effect sensitivity, backdoor identification.</td><td>Moat 2 reports a tentative effect; unmeasured confounding remains possible.</td></tr>
+    </table>
+    <div style="text-align:center; font-weight:700; margin-top:14pt;">Reference</div>
+    <div class="p6-refs">
+      [1] OCEL Standard, &ldquo;Object-Centric Event Log 2.0 Specification.&rdquo; <a href="https://www.ocel-standard.org/2.0/ocel20_specification.pdf">ocel-standard.org/2.0/ocel20_specification.pdf</a><br/>
+      [2] M. Sviridenko, &ldquo;A note on maximizing a submodular set function subject to a knapsack constraint,&rdquo; Operations Research Letters 32(1), 2004. <a href="https://www.sciencedirect.com/science/article/pii/S0167637703000622">sciencedirect.com/.../S0167637703000622</a><br/>
+      [3] C. Cinelli and C. Hazlett, &ldquo;Making Sense of Sensitivity: Extending Omitted Variable Bias,&rdquo; JRSS B, 2020. <a href="https://doi.org/10.1111/rssb.12348">doi.org/10.1111/rssb.12348</a>
+    </div>
+    <div class="p6-dataset">
+      <b>Dataset:</b><br/>
+      <a href="#">Synthetic CSE A&ndash;E demo submissions</a> (generated/local sample inputs; not real NCIIPC data)<br/>
+      <a href="#">OCEL/test fixtures and planted scenarios</a><br/>
+      <a href="#">Expert-reviewed field evaluation dataset</a>: pending NCIIPC access and governance approval.
+    </div>
+  </div>
+  <div class="footer">@SIH Idea submission &mdash; Template<div class="pageno">6</div></div>
+</div>
+
+</body></html>

@@ -43,8 +43,10 @@ class EvidencePackage:
     verdict_capability_link: str | None = None
     verdict_sub_type: str | None = None
     verdict_authority_violated: str | None = None
+    verdict_notes: str | None = None  # examiner's own free-text description, if given
     duplicate_of_finding_id: str | None = None
     source_records: list[str] = field(default_factory=list)
+    cse_id: str | None = None  # None on the synthetic-generator path; set by ingestion for real/multi-CSE data
 
     def __post_init__(self) -> None:
         if self.evidence_quality not in {"HIGH", "MEDIUM", "LOW"}:

@@ -1,0 +1,4 @@
+[
+  {"incident_number": "INC-1", "owner": "J.Singh", "queue": "L1-Support", "state": "OPEN", "created": "2026-02-01T10:00:00Z", "resolved_at": "2026-02-01T11:00:00Z"},
+  {"incident_number": "INC-2", "owner": "P.Rao", "queue": "L2-Support", "state": "OPEN", "created": "2026-02-01T10:05:00Z", "resolved_at": "2026-02-01T10:45:00Z"}
+]

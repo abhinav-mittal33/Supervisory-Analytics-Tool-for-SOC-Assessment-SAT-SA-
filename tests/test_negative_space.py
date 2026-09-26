@@ -59,6 +59,20 @@ def test_abstains_on_insufficient_evidence_and_exposure():
     assert next(f for f in with_zero_exposure if f.group_id == "A").abstain_reason is None
 
 
+def test_two_point_all_zero_observed_abstains_instead_of_crashing():
+    """Regression: exactly 2 peer groups, BOTH with observed=0 (e.g. a two-cycle
+    trend comparison where every case was flagged in both cycles — CSE_D's
+    REASSIGNMENT_LOOP rate never moved off 100%) sends the Poisson GLM's deviance
+    function a first guess of nan, which statsmodels raises as a ValueError, not
+    just a warning — this crashed the whole Streamlit page in production before
+    being caught here. Must abstain, never propagate the exception."""
+    findings = detect_negative_space([
+        PeerGroupObservation("prior", exposure=10, observed=0),
+        PeerGroupObservation("current", exposure=10, observed=0),
+    ])
+    assert all(f.abstain_reason == "INSUFFICIENT_EVIDENCE" for f in findings)
+
+
 def _queue_escalation_observations(ocel, esc_violations: set[str]) -> list[PeerGroupObservation]:
     case_to_queue = {}
     for o in ocel.objects:

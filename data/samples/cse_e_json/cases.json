@@ -1,0 +1,26 @@
+[
+  {
+    "incident_number": "E-1",
+    "owner": "R.Patel",
+    "queue": "Tier1",
+    "state": "OPEN",
+    "created": "2026-04-02T09:00:00Z",
+    "resolved_at": "2026-04-02T09:40:00Z"
+  },
+  {
+    "incident_number": "E-2",
+    "owner": "R.Patel",
+    "queue": "Tier1",
+    "state": "OPEN",
+    "created": "2026-04-02T09:00:00Z",
+    "resolved_at": "2026-04-02T09:40:00Z"
+  },
+  {
+    "incident_number": "E-3",
+    "owner": "R.Patel",
+    "queue": "Tier1",
+    "state": "OPEN",
+    "created": "2026-04-02T09:00:00Z",
+    "resolved_at": "2026-04-02T09:40:00Z"
+  }
+]

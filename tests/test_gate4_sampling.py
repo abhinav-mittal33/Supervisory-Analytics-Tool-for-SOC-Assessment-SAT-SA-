@@ -28,6 +28,14 @@ SIMULATED_TRUE_RATE = {
     "ESCALATION_SLA_VIOLATION": 0.90,
     "MISSING_ENRICHMENT": 0.85,
     "EXCESSIVE_REASSIGNMENT_CARDINALITY": 0.50,
+    # Phase C detectors are heuristic/proxy-based (no planted ground truth exists
+    # for any of them — see moat1/structural.py docstrings) — given a deliberately
+    # moderate simulated rate for this gate's machinery only, same "not a real
+    # accuracy claim" caveat as EXCESSIVE_REASSIGNMENT_CARDINALITY above.
+    "FAST_CLOSE_OUTLIER": 0.50,
+    "REPEATED_ALERT_NO_REMEDIATION": 0.50,
+    "LOW_TELEMETRY_CRITICAL_ASSET": 0.50,
+    "REPETITIVE_INVESTIGATION_PATTERN": 0.50,
 }
 GROUND_TRUTH_BACKED_TYPES = {"REASSIGNMENT_LOOP", "ESCALATION_SLA_VIOLATION", "MISSING_ENRICHMENT"}
 

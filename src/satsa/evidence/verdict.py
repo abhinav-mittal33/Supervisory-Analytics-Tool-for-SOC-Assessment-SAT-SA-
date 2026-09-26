@@ -45,6 +45,10 @@ class Verdict:
     sub_type: str | None = None
     authority_violated: str | None = None
     duplicate_of_finding_id: str | None = None
+    notes: str | None = None  # examiner's own free-text description of the real issue —
+    # optional, valid on ANY verdict type (not just TRUE_SUPERVISORY_FINDING), and
+    # copied verbatim into the audit trail (apply_verdict below) so a typed
+    # explanation is never silently discarded.
 
 
 def validate_verdict(v: Verdict) -> None:
@@ -73,4 +77,5 @@ def apply_verdict(package: EvidencePackage, v: Verdict) -> EvidencePackage:
     package.verdict_sub_type = v.sub_type
     package.verdict_authority_violated = v.authority_violated
     package.duplicate_of_finding_id = v.duplicate_of_finding_id
+    package.verdict_notes = v.notes
     return package

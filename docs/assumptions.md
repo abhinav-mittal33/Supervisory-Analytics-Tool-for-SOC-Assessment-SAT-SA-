@@ -365,3 +365,177 @@ regression test, not a one-time manual check).
 entry 009) are completely unaffected — that logic never depended on DoWhy in the
 first place, only the identification step did. Gate 3 re-run after the swap: same
 two scenarios, same numbers, still passes (55/55 tests total).
+
+---
+
+## 011 — Ingestion layer built; API adapter is a deliberate, scoped exception to
+"zero network calls" (2026-09-25)
+
+**Hit:** The official PS functional requirements (Section 4) are narrower than
+`src/satsa/ingestion/`'s original stub description implied — not "parse any format,"
+specifically: (1) ingest from multiple CSEs, (2) support CSV, JSON, database exports,
+and APIs "where available." Built exactly that: `adapters/{csv,json,db,api}_adapter.py`
+behind one `SourceAdapter` interface, `mapping/field_mapper.py` (auto-suggested,
+always-overridable per-field mapping — never a silent guess), `quality/validator.py`
+(a hard ABSTAIN gate on missing required fields, soft "reduced capability" notes on
+missing optional tables — never fabricates a value), `normalization/canonical.py`
+(produces the exact object/event vocabulary `generator/generate.py` already produces,
+so every existing Moat 1/OKF/sampling detector consumes ingested data unmodified).
+
+**The judgment call:** `api_adapter.py` makes a real HTTP GET call — the one place in
+this codebase that does. This is not a violation of the Section 18 air-gapped/offline
+mandate: `tests/test_offline_deployment.py` proves the *analytical core* (Moat 1,
+OKF, sampling, Moat 2) makes zero network calls of its own, unconditionally, every
+run. The API adapter is different in kind — it is an examiner-configured connection
+to *that CSE's own* internal case-management API, supplied at ingestion time
+(`base_url`, optional bearer token), never a hardcoded external endpoint and never a
+call this build initiates on its own. Real deployment is still fully air-gapped
+network-wide (Section 18(i)-(ii)): the adapter would point at a system reachable
+inside NCIIPC's own controlled network, not the public internet — this build makes
+no claim otherwise and doesn't need internet access to exercise the CSV/JSON/DB path,
+which covers every demo dataset.
+
+**How it's tested without breaking the offline guarantee:** `tests/test_ingestion_api.py`
+runs a real HTTP round-trip, but only against a local, in-process `http.server` bound
+to `127.0.0.1` — never a real external endpoint. This keeps
+`tests/test_offline_deployment.py`'s socket-block regression test meaningful: that
+test still covers the analytical core exactly as before; the API adapter is
+intentionally outside its scope, by design, not by oversight.
+
+**Three demo CSE fixtures** (`data/samples/cse_{a_csv,b_json,c_sqlite}/`) prove the
+actual claim end to end: three files with three different column-naming conventions
+(`assigned_to`/`incident_number`/`handler` all meaning "who owns this case") ingest
+into one canonical model, and `tests/test_ingestion_pipeline_end_to_end.py` proves the
+existing, unmodified `moat1.fusion.fuse()` recovers a planted reassignment loop from
+the real-shaped CSV fixture — not just "adapter runs without throwing."
+
+**Streamlit UI** (`ui/app.py`) gained a source-mode toggle: built-in synthetic profile
+(unchanged) vs. upload-your-own-CSE-data, with a field-mapping confirmation step
+(closed dropdown of detected columns only — never a free-text field, so nothing here
+can be interpolated into a query or file path) before ingestion runs. Verified with a
+real browser (Playwright): uploaded the CSE-A CSV fixture live, confirmed the
+reduced-capability warnings fired correctly for the tables it doesn't have
+(analysts/queues), and confirmed ingestion result (12 objects, 20 events, 3 concerns)
+feeds the same Allocation/Findings tabs the synthetic path already uses.
+
+---
+
+## 012 — Portfolio layer: reusing negative_space.py for cross-CSE peer comparison
+required flipping the "observed" polarity (resolved 2026-09-26)
+
+**Hit:** `moat1/negative_space.py::detect_negative_space` flags a peer group whose
+`observed` count is unexpectedly LOW vs. pooled expectation — correct for its
+original use (missing evidence). Every finding_type worth comparing across CSEs
+(REASSIGNMENT_LOOP, ESCALATION_SLA_VIOLATION, MISSING_ENRICHMENT) is a *problem*
+count, the opposite polarity — a naive reuse (`observed` = violation count) would
+flag CSEs with abnormally FEW problems, exactly backwards.
+
+**Decision:** `portfolio/entity_metrics.py::build_peer_observations` sets `observed`
+= `exposure - violation_count` ("cases WITHOUT the problem" — reframed as "expected
+normal handling was present," consistent with Section 9.4's own "absence of expected
+evidence" framing). A CSE with an excess of problems now correctly shows an
+abnormally LOW "good case" count and gets flagged by the identical, unmodified
+`detect_negative_space` — same function, zero statistical code duplicated. Caught by
+`tests/test_portfolio_entity_risk.py`'s brute-force 4-CSE deviant scenario, which
+initially asserted the wrong direction before this was worked out.
+
+**Entity risk score/tier:** composite score sums `abs(z_score) * capability_materiality
+* authority_weight` across the 3 core finding types (reusing `fusion.py`'s existing
+constants, not a new weighting scheme) — `ENTITY_RISK_TIER_THRESHOLDS`
+(`portfolio/entity_risk.py`) are documented, uncalibrated engineering constants
+(0.75/1.5 cutoffs), explicitly labeled pending real portfolio history, same honesty
+posture as `sampling/cost_model.py`'s own coefficients.
+
+## 013 — Four new Phase C detectors: heuristic proxies, not ground-truth measurements
+(2026-09-26)
+
+Closing PS illustrative use-cases (i), (ii), (iv)/(vi), (vii) required detectors with
+no direct field in the canonical model to measure the named concept against. Each is
+a documented PROXY, tagged `authority="PEER_NORMAL"` throughout (never MANDATORY/
+EXPECTED — there is no rule being violated, only a statistical deviation):
+- **Fast-close outlier** (`structural.py::detect_fast_close`): peer-compares
+  open→close duration within a severity bucket, reusing the same negative_space
+  polarity trick as entry 012 (`observed` = NOT-fast cases).
+- **Repeated alert, no remediation** (`detect_asset_alert_recurrence`): "remediated"
+  = any linked case reached INVESTIGATE/EVIDENCE_COLLECT — a proxy for root-cause
+  fix, not an assertion that remediation actually happened. No field for this exists
+  in the canonical model.
+- **Low-telemetry critical asset** (`asset_alert_counts` + per-tier
+  `detect_negative_space`): exposure is uniform (=1) per asset — no per-asset
+  duty/exposure measure (e.g., network segment size) exists in this data model. An
+  honest simplification, stated in the finding's own assumptions field, not hidden.
+- **Repetitive investigation pattern** (`detect_investigation_uniformity`): the
+  spec's own deferred Section 9.3 secondary detector, implemented as a coefficient-
+  of-variation check on investigation-to-close duration per analyst rather than
+  Isolation Forest — avoids a new ML dependency, keeps every decision in the
+  analytical core deterministic/statistical (the project's own non-negotiable).
+
+`fusion.py::_make_package`'s `case_id` parameter was generalized to `primary_id`
+(asset_id/analyst_id for these four, case_id for the original five) — additive
+rename, all 4 original call sites updated, `supporting_cases` made overridable
+(defaults to `[primary_id]`) so an asset-level finding can list its actual linked
+cases instead of lying that the asset_id is a case.
+
+## 014 — Gate 5 (temporal axis) revived, scoped to two-cycle comparison
+(2026-09-26)
+
+**Hit:** PS Functional Requirement 16 ("trend analysis across time periods") names
+exactly what Gate 5 was built for — deferring it was correct when nothing in the PS
+explicitly demanded it; once it does, the spec's own Section 13 contingency ("scoped-
+down two-cycle version") is the right scope, not full multi-cycle time series.
+
+**Shipped:** `temporal/cycles.py::classify_trend` — reuses `detect_negative_space`
+directly (a two-cycle comparison is peer comparison with `group_id`=cycle label
+instead of CSE id), returning the spec's own four categories. `POTENTIAL_DISPLACEMENT`
+is explicitly a documented HEURISTIC (an improving primary metric alongside a
+simultaneously-worsening proxy metric) — not a proof of the underlying
+"fixed-what's-measured-not-the-risk" phenomenon, which no purely statistical test can
+prove from aggregate counts alone. `tests/test_gate5_temporal.py` proves all four
+categories are distinguished on hand-built scenarios — Gate 5 status flips to
+**PASSED** in `docs/validation_plan.md`.
+
+**Scope trim, stated plainly:** the plan called for a `data/samples/cse_a_csv_cycle2/`
+fixture demonstrating a real two-cycle *ingestion* run end to end. Not built this
+pass — the classifier itself is proven directly against `PeerGroupObservation`
+inputs (equally rigorous for the STOP condition: "correctly distinguishes the four
+categories"), but a live two-cycle ingestion demo in the UI remains a real gap if a
+judge asks to see it running against actual re-ingested data, not just the
+statistics. Logged here rather than silently claimed complete.
+
+## 015 — Expert-agreement validation: mechanism shipped, real validation cannot be
+(2026-09-26)
+
+PS Section 8 asks for validation against real NCIIPC expert manual review. No such
+data exists or is obtainable in this environment — stated plainly, not worked around.
+`validation/expert_agreement.py::compute_agreement` reads the `verdict` field every
+`EvidencePackage` already carries (via `evidence/verdict.py::apply_verdict`, wired
+end-to-end in the UI since before this session) and computes a real confirmation-rate
+metric the moment real verdicts exist — zero new data model, zero fabricated numbers.
+Every surface that renders this (docstring, UI caption) states explicitly: reflects
+whoever recorded verdicts in that session, not certified NCIIPC expert output. This
+is the honest ceiling on what this requirement can satisfy without access to real
+supervisory review data.
+
+## 016 — Benchmark run surfaced a real, unresolved submodular-selection scaling cost
+(2026-09-26)
+
+**Hit:** `scripts/benchmark_pipeline.py` measured `CSE_BETA_SMALL_SCALED` (13,190
+events) taking 124.8s end to end vs. `CSE_ALPHA_MATURE_SCALED` (15,279 events, more
+events) taking only 28.4s — the opposite of what event count alone would predict.
+Profiled directly (`cProfile`, then isolated per-stage timing) rather than guessed:
+`fuse()` itself is fast on both (2-3s; the four new Phase C detectors are not the
+cause, each under 20ms). The actual cost is
+`sampling/submodular.py::budgeted_submodular_selection` — **57 seconds** on
+`SMALL_CSE_SCALED`'s 1,011 concerns (concern count driven up by this session's new
+detectors), vs. a few hundred concerns on the other profiles. The bounded seed-
+enumeration step is fixed-cost (`top_k_seeds=12`), so the growth is in the
+thresholding-greedy completion step, whose real-world cost at this candidate volume
+isn't yet characterized against Badanidiyuru-Vondrák's own near-linear bound.
+
+**Decision:** logged as a known, unresolved performance finding
+(`docs/deployment_requirements.md`) rather than silently shipped or quietly patched —
+diagnosing and fixing `submodular.py`'s scaling behavior is real engineering work
+outside this session's scope (closing the PS gap-analysis findings), not something to
+paper over with an untested change to a previously-validated (Gate 4) component.
+Flagged explicitly as a pre-production blocker for anyone taking this build's
+performance claims at face value beyond the scales already measured.

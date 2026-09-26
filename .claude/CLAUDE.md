@@ -6,7 +6,7 @@
 **Name**: SAT-SA — Supervisory Analytics Tool for SOC Assessment (SIH26157, NCIIPC/NTRO)
 **Purpose**: Prioritize scarce NCIIPC examiner review hours across Critical Sector Entity (CSE) SOCs by surfacing execution gaps and negative space, without becoming a SIEM/SOAR/monitor.
 **MVP scope**: See `docs/product_contract.md` and the full build spec conversation history. In: object-centric evidence discovery (Moat 1), budgeted submodular sampling, causal intervention decision engine (Moat 2), examiner UI. Out: real-time monitoring, LLM-in-the-analytical-core (anywhere), cloud/SaaS dependency, the temporal axis (optional, cut first).
-**Status**: Active development — all 5 required validation gates pass (Gate 0-4); Gate 5 (temporal axis) optional and deferred.
+**Status**: Active development — all 6 gates pass (Gate 0-5; Gate 5/temporal axis revived and passing, no longer deferred). Ingestion layer (CSV/JSON/SQLite export/generic API), cross-CSE portfolio layer (entity risk + peer comparison), 4 new Moat 1 detectors, offline HTML reporting, and an expert-agreement validation mechanism all built closing the PS gap-analysis — see `docs/assumptions.md` entries 011-016. One known, honestly-logged open item: a real scaling cost in the pre-existing submodular selection component, surfaced by this session's benchmark run (entry 016).
 
 ## Stack
 
@@ -28,18 +28,22 @@ sat-sa/
   docs/                    SAT-SA build-spec docs: product_contract, ontology, architecture,
                            expected_authority, assumptions (loophole log), validation_plan, references
   src/satsa/
-    ingestion/             raw CSV/JSON -> canonical object model (not yet built)
+    ingestion/             CSV/JSON/SQLite-export/generic-REST-API -> canonical
+                           object model (adapters/, mapping/, normalization/, quality/)
     generator/             synthetic CSE profile generator + hard negatives + calibration
     ocel/                  OCEL 2.0 model, json_io, sqlite_io, validate (own implementation)
       schema/              official ocel20-schema-json.json, fetched from ocel-standard.org
     okf/                   OKF rule schema, DuckDB constraint compiler, worked rules
-    moat1/                 structural (reassignment loop), negative_space, drift, fusion
+    moat1/                 structural (reassignment loop + 4 Phase C detectors), negative_space, drift, fusion
     sampling/              cost_model, budget_split, submodular, feedback, baselines, allocation_explanation
     moat2/                 synthetic_causal_data, causal_model, sensitivity, decision, intervention
-    temporal/               optional, not built (Section 13, cut first under time pressure)
+    portfolio/              cross-CSE peer comparison + entity risk indicator (PS req 8/9)
+    temporal/               two-cycle trend classification (Gate 5, PS req 16 — built, no longer deferred)
+    reporting/              self-contained offline HTML report generator (PS req 15-17)
+    validation/             expert-agreement mechanism (PS Sec 8 — mechanism only, assumptions.md 015)
     evidence/               package (Evidence Package schema), verdict (examiner verdict ontology)
     llm_explainer/          optional, not built — system works without it either way
-    ui/                     app.py — Streamlit examiner console (Section 17 minimum set)
+    ui/                     app.py — Streamlit examiner console (Section 17 minimum set + Portfolio tab)
   tests/                    one or more pytest modules per gate + per module
   data/dev/                 dev-scale synthetic set (gitignored, regenerate via scripts/build_dev_dataset.py)
   data/scaled/               two full-scale CSE profiles (gitignored, scripts/build_scaled_datasets.py)

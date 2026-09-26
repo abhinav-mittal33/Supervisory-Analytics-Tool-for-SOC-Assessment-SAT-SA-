@@ -1,0 +1,3 @@
+asset_id,criticality,asset_type
+AST001,HIGH,Server
+AST002,LOW,Endpoint

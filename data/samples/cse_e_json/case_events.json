@@ -1,0 +1,56 @@
+[
+  {
+    "incident_number": "E-1",
+    "activity": "enriched",
+    "analyst_id": null,
+    "event_time": "2026-04-02T09:10:00Z"
+  },
+  {
+    "incident_number": "E-1",
+    "activity": "investigate",
+    "analyst_id": "R.Patel",
+    "event_time": "2026-04-02T09:20:00Z"
+  },
+  {
+    "incident_number": "E-1",
+    "activity": "closed",
+    "analyst_id": null,
+    "event_time": "2026-04-02T09:40:00Z"
+  },
+  {
+    "incident_number": "E-2",
+    "activity": "enriched",
+    "analyst_id": null,
+    "event_time": "2026-04-02T09:10:00Z"
+  },
+  {
+    "incident_number": "E-2",
+    "activity": "investigate",
+    "analyst_id": "R.Patel",
+    "event_time": "2026-04-02T09:20:00Z"
+  },
+  {
+    "incident_number": "E-2",
+    "activity": "closed",
+    "analyst_id": null,
+    "event_time": "2026-04-02T09:40:00Z"
+  },
+  {
+    "incident_number": "E-3",
+    "activity": "enriched",
+    "analyst_id": null,
+    "event_time": "2026-04-02T09:10:00Z"
+  },
+  {
+    "incident_number": "E-3",
+    "activity": "investigate",
+    "analyst_id": "R.Patel",
+    "event_time": "2026-04-02T09:20:00Z"
+  },
+  {
+    "incident_number": "E-3",
+    "activity": "closed",
+    "analyst_id": null,
+    "event_time": "2026-04-02T09:40:00Z"
+  }
+]

@@ -1,0 +1,6 @@
+[
+  {"incident_number": "INC-1", "activity": "investigate", "analyst_id": "J.Singh", "event_time": "2026-02-01T10:20:00Z"},
+  {"incident_number": "INC-1", "activity": "closed", "analyst_id": null, "event_time": "2026-02-01T11:00:00Z"},
+  {"incident_number": "INC-2", "activity": "reassigned", "analyst_id": "K.Iyer", "event_time": "2026-02-01T10:15:00Z"},
+  {"incident_number": "INC-2", "activity": "closed", "analyst_id": null, "event_time": "2026-02-01T10:45:00Z"}
+]

@@ -1,0 +1,70 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+/* Reproduced verbatim from src/satsa/ui/styles.css so this mockup is pixel-true to the real running app, not an artist's impression. */
+:root { color-scheme: light; }
+body { background:#fff; color:#0b0c0c; font-family: Arial, sans-serif; margin:0; }
+.app { display:flex; min-height:900px; }
+.sidebar { width:280px; background:#f3f2f1; border-right:1px solid #b1b4b6; padding:24px 20px; box-sizing:border-box; }
+.brand { color:#0b0c0c; font:700 27px/1.2 Arial, sans-serif; padding-top:7px; border-top:6px solid #0b0c0c; }
+.brand-sub { color:#505a5f; font:400 14px/1.5 Arial, sans-serif; margin:4px 0 20px; }
+.menu-label { color:#505a5f; font-size:13px; margin:18px 0 6px; }
+.menu-item { padding:10px 8px; border-bottom:1px solid #b1b4b6; font-size:15px; }
+.menu-item.active { background:#d2e2f1; color:#003078; font-weight:700; border-left:4px solid #1d70b8; }
+.main { flex:1; padding:40px 48px; box-sizing:border-box; max-width:1160px; }
+h1 { font-size:2.15rem; font-weight:700; margin:0 0 4px; }
+h3 { font-size:1.3rem; font-weight:700; margin:22px 0 10px; }
+.caption { color:#505a5f; line-height:1.5; font-size:14px; }
+.metrics { display:flex; gap:16px; margin:14px 0 8px; }
+.metric { background:#f3f2f1; border-top:4px solid #1d70b8; padding:16px 20px; min-height:90px; flex:1; }
+.metric-label { color:#505a5f; font-size:13px; }
+.metric-value { color:#0b0c0c; font-weight:700; font-size:1.6rem; margin-top:4px; }
+table { width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }
+th, td { border:1px solid #b1b4b6; padding:8px 12px; text-align:left; }
+th { background:#f3f2f1; }
+.badge { display:inline-block; padding:2px 10px; font-size:12px; font-weight:700; color:#fff; background:#00703c; }
+.finding-panel { border:1px solid #b1b4b6; border-left:5px solid #1d70b8; padding:16px 20px; margin-top:16px; }
+.verdict-note { background:#fff9c4; border-left:4px solid #b58840; padding:10px 14px; font-size:13px; margin-top:10px; }
+</style></head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="brand">SAT-SA</div>
+    <div class="brand-sub">Supervisory assessment</div>
+    <div class="menu-label">MENU</div>
+    <div class="menu-item active">Companies</div>
+    <div class="menu-item">Peer comparison</div>
+    <div class="menu-item">Findings</div>
+    <div class="menu-item">Import data</div>
+    <div class="menu-item">Review plan</div>
+    <div class="menu-item">Audit &amp; Reports</div>
+    <div class="menu-label" style="margin-top:30px;">Local, offline examiner workspace</div>
+  </div>
+  <div class="main">
+    <h1>CSE_D</h1>
+    <div class="caption">Everything an investigator needs to know before opening individual findings.</div>
+    <h3>Briefing</h3>
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Findings this batch</div><div class="metric-value">12</div></div>
+      <div class="metric"><div class="metric-label">Cases this batch</div><div class="metric-value">10</div></div>
+      <div class="metric"><div class="metric-label">Batches on record</div><div class="metric-value">2</div></div>
+      <div class="metric"><div class="metric-label">Last submitted</div><div class="metric-value" style="font-size:1.1rem;">2026-09-25</div></div>
+    </div>
+    <h3>Findings — latest</h3>
+    <table>
+      <tr><th>Finding ID</th><th>Finding</th><th>Capability</th><th>Concern score</th><th>Evidence quality</th><th>Case</th></tr>
+      <tr><td>FIND00011</td><td>Repetitive investigation pattern</td><td>Investigation</td><td>0.400</td><td>HIGH</td><td>ANL_D1</td></tr>
+      <tr><td>FIND00001</td><td>Reassignment loop</td><td>Operational Discipline</td><td>0.350</td><td>HIGH</td><td>CASE_D03</td></tr>
+      <tr><td>FIND00002</td><td>Reassignment loop</td><td>Operational Discipline</td><td>0.350</td><td>HIGH</td><td>CASE_D04</td></tr>
+    </table>
+    <div class="finding-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>FIND00011 · Repetitive investigation pattern</strong>
+        <span class="badge">HIGH evidence</span>
+      </div>
+      <div class="caption" style="margin-top:8px;">Across 5 different cases, this analyst's time from investigation to case-close was nearly identical every single time — a pattern that often means the review was a quick formality rather than looking closely at each case on its own merits.</div>
+      <div class="verdict-note"><strong>Investigator's notes:</strong> Talked to the analyst — real shift handover, not logged with the SOP code.</div>
+    </div>
+  </div>
+</div>
+</body></html>

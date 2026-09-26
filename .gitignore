@@ -7,6 +7,7 @@ data/dev/*.sqlite
 data/dev/*.json
 data/scaled/*.sqlite
 data/scaled/*.json
+data/portfolio_history/
 .DS_Store
 .env
 .playwright-mcp/

@@ -81,9 +81,22 @@ Weakening a test to make a gate pass is a regression, not a fix (Section 1, item
   per-type recall vs. 0%). That gap is the demonstrated core value of
   diminishing-returns bucket-aware selection over a naive ranked list (Section 10.1).
 
-- **Gate 5 [optional].** Only if the temporal axis (Section 13) is attempted: correctly
-  distinguishes `VERIFIED_IMPROVEMENT` / `POTENTIAL_DISPLACEMENT` / `REGRESSED` /
-  `INSUFFICIENT_EVIDENCE`. **Status: deferred, cut first under time pressure.**
+- **Gate 5 — Temporal axis, two-cycle comparison.** `tests/test_gate5_temporal.py`.
+  Correctly distinguishes `VERIFIED_IMPROVEMENT` / `POTENTIAL_DISPLACEMENT` /
+  `REGRESSED` / `INSUFFICIENT_EVIDENCE`. **Status: PASSED, 2026-09-26** — revived
+  from "deferred" because PS Functional Requirement 16 ("trend analysis across time
+  periods") names this directly. Scoped exactly to the spec's own Section 13
+  contingency (two-cycle, not full time series). All four categories verified
+  against hand-built `PeerGroupObservation` scenarios: a clear rate improvement with
+  no proxy given → `VERIFIED_IMPROVEMENT`; the same improvement alongside a proxy
+  metric that simultaneously worsens → `POTENTIAL_DISPLACEMENT`; a clear regression →
+  `REGRESSED`; either cycle below `MIN_PEER_GROUP_SIZE` or a rate shift too small to
+  clear the z-threshold → `INSUFFICIENT_EVIDENCE`. Implementation:
+  `src/satsa/temporal/cycles.py::classify_trend`, reusing
+  `moat1/negative_space.py::detect_negative_space` unmodified (see
+  `docs/assumptions.md` entry 014 for the reuse mechanics and the one honest scope
+  trim: a live two-cycle *ingestion* fixture wasn't built this pass, only the
+  classifier itself, proven directly).
 
 ## Offline deployment verification (Section 18, Build Order Step 14)
 
@@ -102,3 +115,75 @@ phone home, had it done so; it doesn't.
 A software bill of materials (`docs/sbom.json`, `scripts/generate_sbom.py`) covers 124
 installed packages, zero GPL/AGPL/LGPL among them — generated directly from the
 virtualenv's own package metadata, not hand-maintained.
+
+## Ingestion layer verification (Functional Requirements 1-2, not a numbered gate)
+
+Not one of the five required gates, but held to the same standard: a real,
+end-to-end proof, not "the adapter imports without an exception." **Status: PASSED,
+2026-09-25** (`tests/test_ingestion_pipeline_end_to_end.py` + the per-adapter test
+modules, 29 tests total) — three deliberately heterogeneous demo CSE exports
+(`data/samples/cse_a_csv`, `cse_b_json`, `cse_c_sqlite`), each with a different
+column-naming convention for the same concepts (`assigned_to` / `incident_number` /
+`handler`), each ingest through their own adapter into the identical canonical
+object/event vocabulary `generator/generate.py` produces. The real assertion: the
+existing, unmodified `moat1.structural.detect_reassignment_loops` recovers a planted
+reassignment loop from the CSV fixture's real-shaped data — proving the ingestion
+layer's output is actually usable by every downstream detector, not merely
+well-formed. The data-reliability/ABSTAIN gate (`quality/validator.py`) is separately
+tested for both directions: missing required fields correctly ABSTAIN rather than
+silently coercing bad data, and missing optional tables (alerts/assets/analysts/
+queues) correctly report reduced capability rather than fabricating a value. See
+`docs/assumptions.md` entry 011 for the full design and the one deliberate,
+documented exception to the zero-network-calls posture (the generic API adapter,
+tested only against a local in-process server).
+
+## Portfolio layer verification (PS req 8/9, not a numbered gate)
+
+**Status: PASSED, 2026-09-26** (`tests/test_portfolio_entity_risk.py`, 5 tests).
+Cross-CSE peer comparison (`portfolio/peer_comparison.py`) and entity-level risk
+indicators (`portfolio/entity_risk.py`) proven against a hand-built 4-CSE scenario
+with one deliberately deviant entity (same brute-force verification standard Gate 4
+used for submodular selection): the deviant CSE is correctly flagged, correctly
+ranks first by `entity_risk_score`, and a uniform-peers scenario (no real deviation)
+correctly leaves every entity at `LOW` tier. Both modules reuse
+`moat1/negative_space.py::detect_negative_space` unmodified — see
+`docs/assumptions.md` entry 012 for the "observed" polarity reframing this required.
+Live-verified in the UI's Portfolio tab against the 3 real sample CSE fixtures
+(CSV/JSON/SQLite, three different column-naming conventions) via Playwright.
+
+## Phase C detectors verification (PS illustrative use-cases i, ii, iv/vi, vii)
+
+**Status: PASSED, 2026-09-26** (11 unit tests across
+`tests/test_detector_fast_close.py`, `test_detector_asset_recurrence.py`,
+`test_detector_asset_telemetry.py`, `test_detector_investigation_uniformity.py`,
+plus `tests/test_fusion_phase_c_detectors.py` proving all four are wired into
+`fuse()` and fire on real generated data). Each detector tested against a planted
+positive AND a matched hard negative (not just "doesn't crash") — e.g. the asset-
+recurrence detector correctly distinguishes an asset with 3 unremediated alerts
+(flagged) from an identical asset whose alerts WERE investigated (not flagged). All
+four are honest statistical/deterministic proxies, tagged `authority="PEER_NORMAL"`
+throughout — see `docs/assumptions.md` entry 013 for exactly what each proxies for
+and why.
+
+## Reporting and expert-agreement verification (PS req 15-17, Section 8)
+
+**Status: PASSED, 2026-09-26** (`tests/test_report_builder.py`,
+`tests/test_expert_agreement.py`, 10 tests total). The generated HTML report
+(`reporting/report_builder.py`) is checked for real content — every supplied
+entity's risk tier and every concern's finding_id must appear in the output string,
+and untrusted finding content is verified HTML-escaped (a `<script>` payload in a
+finding's rationale does not survive into the rendered report). The expert-agreement
+mechanism (`validation/expert_agreement.py`) is checked against hand-built verdicted
+concerns for correct confirmation-rate arithmetic and per-finding-type/per-authority
+breakdowns — see `docs/assumptions.md` entry 015 for why this ships as a mechanism
+only: no real NCIIPC expert-review data exists in this environment to validate
+against, and nothing here pretends otherwise.
+
+## Performance/scalability evidence (PS req 7, deliverables vi/viii)
+
+**Status: measured, not a pass/fail gate** — `scripts/benchmark_pipeline.py`,
+results in `docs/deployment_requirements.md`. Real wall-clock and peak-memory numbers
+across all 3 synthetic profiles plus a 2-CSE portfolio run. This measurement pass
+also surfaced a genuine, unresolved performance finding in the pre-existing
+submodular-selection component at high concern volumes — logged honestly
+(`docs/assumptions.md` entry 016) rather than hidden or silently patched.

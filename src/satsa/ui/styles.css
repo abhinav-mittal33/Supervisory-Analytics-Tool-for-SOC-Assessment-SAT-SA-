@@ -1,0 +1,32 @@
+<style>
+/* Familiar public-service layout. All assets stay on this machine. */
+:root { color-scheme: light; }
+.stApp, [data-testid="stAppViewContainer"] { background: #fff; color: #0b0c0c; }
+[data-testid="stHeader"] { background: #fff; }
+[data-testid="stMainBlockContainer"] { max-width: 1320px; padding: 2.5rem 3rem 5rem; }
+[data-testid="stSidebar"] { background: #f3f2f1; border-right: 1px solid #b1b4b6; }
+[data-testid="stSidebarUserContent"] { padding-top: 1.5rem; }
+.brand { color: #0b0c0c; font: 700 27px/1.2 Arial, sans-serif; padding-top: 7px; border-top: 6px solid #0b0c0c; }
+.brand-sub { color: #505a5f; font: 400 14px/1.5 Arial, sans-serif; margin: 4px 0 20px; }
+h1, h2, h3 { color: #0b0c0c !important; font-family: Arial, sans-serif; letter-spacing: normal !important; }
+h1 { font-size: 2.15rem !important; font-weight: 700 !important; margin-bottom: .3rem; }
+h3 { font-size: 1.3rem !important; font-weight: 700 !important; margin-top: 1.5rem; }
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { color: #505a5f !important; line-height: 1.5; }
+[data-testid="stMetric"] { background: #f3f2f1; border: 0; border-top: 4px solid #1d70b8; border-radius: 0; padding: 16px 20px; min-height: 105px; }
+[data-testid="stMetricLabel"] { color: #505a5f; }
+[data-testid="stMetricValue"] { color: #0b0c0c; font-variant-numeric: tabular-nums; font-weight: 700; }
+[data-testid="stDataFrame"], [data-testid="stTable"] { border: 1px solid #b1b4b6; border-radius: 0; }
+[data-testid="stExpander"] { background: #fff; border-radius: 0; border: 1px solid #b1b4b6; }
+[data-testid="stAlert"] { border-radius: 0; }
+[data-testid="stSidebar"] [role="radiogroup"] { gap: 0; }
+[data-testid="stSidebar"] [role="radiogroup"] label { padding: 10px 8px; border-bottom: 1px solid #b1b4b6; border-radius: 0; }
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) { background: #d2e2f1; color: #003078; font-weight: 700; border-left: 4px solid #1d70b8; }
+button[kind="primary"] { background: #00703c !important; border-color: #00703c !important; border-radius: 0 !important; }
+button { border-radius: 0 !important; }
+button:focus-visible, input:focus-visible, [role="row"]:focus-visible { outline: 3px solid #ffdd00 !important; outline-offset: 0; }
+hr { border-color: #b1b4b6; }
+@media (max-width: 800px) {
+  [data-testid="stMainBlockContainer"] { padding: 1.5rem 1rem 3rem; }
+  h1 { font-size: 1.7rem !important; }
+}
+</style>
