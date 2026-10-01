@@ -42,12 +42,6 @@ def coverage_score(selected_ids: set[str], bucket_of: dict[str, str], concave=ma
     return sum(concave(c) for c in counts.values())
 
 
-def _marginal_gain(item_id: str, selected: set[str], bucket_of: dict[str, str], concave) -> float:
-    b = bucket_of[item_id]
-    current = sum(1 for cid in selected if bucket_of[cid] == b)
-    return concave(current + 1) - concave(current)
-
-
 def threshold_greedy_complete(
     candidates: list[str],
     costs: dict[str, float],
@@ -59,12 +53,28 @@ def threshold_greedy_complete(
 ) -> set[str]:
     selected = set(seed)
     spent = sum(costs[i] for i in selected)
+    # Running per-bucket counts, updated incrementally as items are added below.
+    # `_marginal_gain` reading `bucket_counts[b]` here is exactly the quantity it
+    # used to recompute by rescanning all of `selected` on every call — that O(|selected|)
+    # rescan, repeated for every candidate on every threshold pass across every seed
+    # combination, was the actual cost behind the 57s/1,011-concern measurement in
+    # docs/assumptions.md entry 016, not the thresholding-greedy structure itself.
+    bucket_counts: dict[str, int] = {}
+    for cid in selected:
+        b = bucket_of[cid]
+        bucket_counts[b] = bucket_counts.get(b, 0) + 1
+
     remaining = [c for c in candidates if c not in selected and costs[c] <= budget - spent]
     if not remaining:
         return selected
 
+    def marginal_gain(item_id: str) -> float:
+        b = bucket_of[item_id]
+        current = bucket_counts.get(b, 0)
+        return concave(current + 1) - concave(current)
+
     def density(i: str) -> float:
-        g = _marginal_gain(i, selected, bucket_of, concave)
+        g = marginal_gain(i)
         return g / costs[i] if costs[i] > 0 else float("inf")
 
     v_max = max((density(i) for i in remaining), default=0.0)
@@ -79,10 +89,12 @@ def threshold_greedy_complete(
                 continue
             if spent + costs[i] > budget:
                 continue
-            g = _marginal_gain(i, selected, bucket_of, concave)
+            g = marginal_gain(i)
             if costs[i] > 0 and g / costs[i] >= tau:
                 selected.add(i)
                 spent += costs[i]
+                b = bucket_of[i]
+                bucket_counts[b] = bucket_counts.get(b, 0) + 1
         tau /= 1 + epsilon
     return selected
 

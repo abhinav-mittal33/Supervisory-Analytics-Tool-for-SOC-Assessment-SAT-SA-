@@ -61,6 +61,14 @@ PROFILES = {
 }
 
 
+@st.cache_data(show_spinner="Selecting review batch under budget...")
+def cached_submodular_selection(finding_ids: tuple, costs: dict, budget: float, groups: dict):
+    """Cached wrapper — budgeted_submodular_selection costs 57s+ on large concern
+    sets (docs/assumptions.md entry 016) and was previously called uncached on
+    every Streamlit script rerun (any widget interaction), freezing the UI."""
+    return budgeted_submodular_selection(list(finding_ids), costs, budget, groups)
+
+
 @st.cache_resource(show_spinner="Generating dataset and running Moat 1 pipeline...")
 def load_pipeline(profile_name: str):
     profile = PROFILES[profile_name]
@@ -750,8 +758,8 @@ def main() -> None:
     costs = {c.finding_id: st.session_state.cost_overrides.get(c.finding_id, c.estimated_review_cost_minutes)
              for c in concerns}
     by_id = {c.finding_id: c for c in concerns}
-    selected, _ = budgeted_submodular_selection(
-        list(by_id), costs, total_cost * fraction,
+    selected, _ = cached_submodular_selection(
+        tuple(by_id), costs, total_cost * fraction,
         {c.finding_id: f"{c.capability}|{c.finding_type}" for c in concerns},
     )
     if page == "Findings":
