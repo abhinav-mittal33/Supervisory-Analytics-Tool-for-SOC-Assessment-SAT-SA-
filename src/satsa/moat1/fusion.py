@@ -31,12 +31,14 @@ import duckdb
 from satsa.evidence.package import EvidencePackage, Provenance
 from satsa.moat1.negative_space import PeerGroupObservation, detect_negative_space
 from satsa.moat1.structural import (
+    analyst_investigation_counts,
     asset_alert_counts,
     case_open_close_times,
     detect_asset_alert_recurrence,
     detect_fast_close,
     detect_investigation_uniformity,
     detect_reassignment_loops,
+    queue_escalation_counts,
 )
 from satsa.ocel.model import OCEL
 from satsa.okf.compiler import evaluate_rule
@@ -93,6 +95,7 @@ def _make_package(
     assumptions_notes: list[str], cse_id: str | None = None,
     low_confidence_cases: frozenset[str] = frozenset(),
     supporting_cases: list[str] | None = None,
+    source_system: str = "satsa-generator",
 ) -> EvidencePackage:
     """primary_id is the affected object's ID — a case_id for the original
     per-case detectors, but an asset_id or analyst_id for the entity-level
@@ -137,7 +140,7 @@ def _make_package(
         supporting_events=event_ids,
         assumptions=assumptions_notes,
         provenance=Provenance(
-            source_system="satsa-generator",
+            source_system=source_system,
             source_file="",
             source_record_id=primary_id,
             ingestion_batch_id="",
@@ -151,6 +154,7 @@ def _make_package(
 def fuse(
     ocel: OCEL, conn: duckdb.DuckDBPyConnection, *,
     cse_id: str | None = None, low_confidence_cases: set[str] | None = None,
+    source_system: str = "satsa-generator",
 ) -> FusionResult:
     low_confidence = frozenset(low_confidence_cases or ())
     signals_by_case = {s.case_id: s for s in detect_reassignment_loops(ocel)}
@@ -185,7 +189,7 @@ def fuse(
                         "a row, with no documented shift-change reason recorded for any of the handoffs.",
                         f"analyst_sequence={sig.analyst_sequence}",
                     ],
-                    cse_id=cse_id, low_confidence_cases=low_confidence,
+                    cse_id=cse_id, low_confidence_cases=low_confidence, source_system=source_system,
                 )
             )
         elif sig.is_loop and sig.justified:
@@ -211,7 +215,7 @@ def fuse(
                 primary_id=case_id,
                 event_ids=_event_ids_for_case(ocel, case_id, "REASSIGN"),
                 assumptions_notes=[violation.detail],
-                cse_id=cse_id, low_confidence_cases=low_confidence,
+                cse_id=cse_id, low_confidence_cases=low_confidence, source_system=source_system,
             )
         )
 
@@ -227,7 +231,7 @@ def fuse(
                 primary_id=case_id,
                 event_ids=_event_ids_for_case(ocel, case_id, "ESCALATE"),
                 assumptions_notes=[violation.detail],
-                cse_id=cse_id, low_confidence_cases=low_confidence,
+                cse_id=cse_id, low_confidence_cases=low_confidence, source_system=source_system,
             )
         )
 
@@ -243,7 +247,7 @@ def fuse(
                 primary_id=case_id,
                 event_ids=_event_ids_for_case(ocel, case_id, "INVESTIGATE"),
                 assumptions_notes=[violation.detail],
-                cse_id=cse_id, low_confidence_cases=low_confidence,
+                cse_id=cse_id, low_confidence_cases=low_confidence, source_system=source_system,
             )
         )
 
@@ -282,7 +286,7 @@ def fuse(
                             f"severity={finding.group_id}, duration_minutes={fast_signals[case_id].duration_minutes:.1f}, "
                             f"peer group z_score={finding.z_score:.2f}",
                         ],
-                        cse_id=cse_id, low_confidence_cases=low_confidence,
+                        cse_id=cse_id, low_confidence_cases=low_confidence, source_system=source_system,
                     )
                 )
 
@@ -307,7 +311,7 @@ def fuse(
                     "determination (docs/assumptions.md).",
                 ],
                 supporting_cases=list(sig.linked_case_ids),
-                cse_id=cse_id, low_confidence_cases=low_confidence,
+                cse_id=cse_id, low_confidence_cases=low_confidence, source_system=source_system,
             )
         )
 
@@ -335,7 +339,7 @@ def fuse(
                         f"{finding.expected:.1f} (z_score={finding.z_score:.2f}); exposure uniform (=1) per asset — "
                         "no per-asset duty/exposure measure exists in the canonical model yet.",
                     ],
-                    cse_id=cse_id, low_confidence_cases=low_confidence,
+                    cse_id=cse_id, low_confidence_cases=low_confidence, source_system=source_system,
                 )
             )
 
@@ -361,7 +365,110 @@ def fuse(
                     "measurement of review quality.",
                 ],
                 supporting_cases=[],
-                cse_id=cse_id, low_confidence_cases=low_confidence,
+                cse_id=cse_id, low_confidence_cases=low_confidence, source_system=source_system,
+            )
+        )
+
+    # PS use-case ix: investigation/escalation workload inconsistent with expected
+    # activity level. Reuses detect_negative_space() completely unchanged (z_score,
+    # abstain_reason) but, unlike every other call site above, checks it TWO-SIDED —
+    # too few investigations for the caseload (possible superficial review) AND too
+    # many (possible overload) both matter here, whereas negative_space's own
+    # .flagged property only ever fires one-sided (too-low). See docs/assumptions.md
+    # entry 019 for why: no Gate-tested profile's natural variance actually crosses
+    # this threshold today (measured directly, max|z|=1.81 across all three), so
+    # correctness here is proven by the hand-built-OCEL unit tests, not by this
+    # wiring firing on generated data.
+    analyst_cases: dict[str, list[str]] = {}
+    for o in ocel.objects:
+        if o.type == "Case":
+            for r in o.relationships:
+                if r.qualifier == "current_assignee":
+                    analyst_cases.setdefault(r.target_id, []).append(o.id)
+
+    inv_observations = [
+        PeerGroupObservation(group_id=aid, exposure=exposure, observed=observed)
+        for aid, exposure, observed in analyst_investigation_counts(ocel)
+    ]
+    for finding in detect_negative_space(inv_observations):
+        if finding.abstain_reason is not None or finding.z_score is None or abs(finding.z_score) < 2.0:
+            continue
+        direction = "far fewer" if finding.z_score < 0 else "far more"
+        risk_note = (
+            "a possible superficial-review signal worth spot-checking" if finding.z_score < 0
+            else "a possible overload risking review quality, worth checking capacity"
+        )
+        concerns.append(
+            _make_package(
+                finding_id=next_finding_id(),
+                finding_type="INVESTIGATION_WORKLOAD_INCONSISTENT",
+                capability="Investigation",
+                authority="PEER_NORMAL",
+                rule_id=None, rule_version=None,
+                primary_id=finding.group_id,
+                event_ids=[],
+                assumptions_notes=[
+                    f"This analyst investigated {finding.observed} case(s) against {finding.exposure} assigned — "
+                    f"{direction} than peers with a similar caseload typically show (expected around "
+                    f"{finding.expected:.1f}). {risk_note}.",
+                    f"assigned_case_count={finding.exposure}, investigation_count={finding.observed} vs. "
+                    f"peer-expected {finding.expected:.1f} (z_score={finding.z_score:.2f}); two-sided check — "
+                    "negative_space.py's own .flagged is one-sided (too-low only); this reinterprets the same "
+                    "z_score both directions for 'inconsistent with expected activity' (PS use-case ix).",
+                ],
+                supporting_cases=analyst_cases.get(finding.group_id, []),
+                cse_id=cse_id, low_confidence_cases=low_confidence, source_system=source_system,
+            )
+        )
+
+    case_queue: dict[str, str] = {}
+    queue_escalated_cases: dict[str, list[str]] = {}
+    for o in ocel.objects:
+        if o.type == "Case":
+            for r in o.relationships:
+                if r.qualifier == "current_queue":
+                    case_queue[o.id] = r.target_id
+    for e in ocel.events:
+        if e.type != "ESCALATE":
+            continue
+        for r in e.relationships:
+            if r.qualifier == "escalation_for_case":
+                qid = case_queue.get(r.target_id)
+                if qid:
+                    queue_escalated_cases.setdefault(qid, []).append(r.target_id)
+
+    esc_observations = [
+        PeerGroupObservation(group_id=qid, exposure=exposure, observed=observed)
+        for qid, exposure, observed in queue_escalation_counts(ocel)
+    ]
+    for finding in detect_negative_space(esc_observations):
+        if finding.abstain_reason is not None or finding.z_score is None or abs(finding.z_score) < 2.0:
+            continue
+        direction = "far fewer" if finding.z_score < 0 else "far more"
+        risk_note = (
+            "possibly under-escalating real incidents, worth checking escalation discipline" if finding.z_score < 0
+            else "possibly over-escalating relative to its own caseload, worth checking escalation criteria"
+        )
+        concerns.append(
+            _make_package(
+                finding_id=next_finding_id(),
+                finding_type="ESCALATION_WORKLOAD_INCONSISTENT",
+                capability="Escalation",
+                authority="PEER_NORMAL",
+                rule_id=None, rule_version=None,
+                primary_id=finding.group_id,
+                event_ids=[],
+                assumptions_notes=[
+                    f"This queue saw {finding.observed} escalation(s) against {finding.exposure} routed cases — "
+                    f"{direction} than other queues with similar case volume typically show (expected around "
+                    f"{finding.expected:.1f}). {risk_note}.",
+                    f"routed_case_count={finding.exposure}, escalation_count={finding.observed} vs. peer-expected "
+                    f"{finding.expected:.1f} (z_score={finding.z_score:.2f}); attributed by queue, not analyst — "
+                    "ESCALATE events carry no analyst or queue relationship directly in the canonical OCEL model "
+                    "(docs/assumptions.md entry 019).",
+                ],
+                supporting_cases=queue_escalated_cases.get(finding.group_id, []),
+                cse_id=cse_id, low_confidence_cases=low_confidence, source_system=source_system,
             )
         )
 
