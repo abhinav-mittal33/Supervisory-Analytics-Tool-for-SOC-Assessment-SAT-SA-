@@ -124,6 +124,27 @@ SMALL_CSE_SCALED = CSEProfile(
     num_reassignment_loop_hard_negative=20,
 )
 
+# --- UI demo-only siblings (docs/assumptions.md entry 018): the Streamlit "Findings"
+# page's sample-dataset picker bundles several CSEs per tier instead of exactly one,
+# so it can demonstrate real multi-entity attribution (distinct cse_id per concern,
+# Moat 2 scoped per entity) the same way the Companies/Portfolio pages already do.
+# These vary ONLY name/seed from the calibrated profiles above — independent synthetic
+# draws of the same cited CSE "type", not new calibration. The three profiles above
+# (MATURE_CSE_DEV, MATURE_CSE_SCALED, SMALL_CSE_SCALED) are untouched: they remain the
+# exact Gate 0/1/2/4 test fixtures.
+MATURE_CSE_DEV_B = replace(MATURE_CSE_DEV, name="CSE_ALPHA_MATURE_DEV_B", seed=20260927)
+MATURE_CSE_DEV_C = replace(MATURE_CSE_DEV, name="CSE_ALPHA_MATURE_DEV_C", seed=20260928)
+
+MATURE_CSE_SCALED_B = replace(MATURE_CSE_SCALED, name="CSE_ALPHA_MATURE_SCALED_B", seed=20260929)
+MATURE_CSE_SCALED_C = replace(MATURE_CSE_SCALED, name="CSE_ALPHA_MATURE_SCALED_C", seed=20260930)
+MATURE_CSE_SCALED_D = replace(MATURE_CSE_SCALED, name="CSE_ALPHA_MATURE_SCALED_D", seed=20260931)
+MATURE_CSE_SCALED_E = replace(MATURE_CSE_SCALED, name="CSE_ALPHA_MATURE_SCALED_E", seed=20260932)
+
+SMALL_CSE_SCALED_B = replace(SMALL_CSE_SCALED, name="CSE_BETA_SMALL_SCALED_B", seed=20260933)
+SMALL_CSE_SCALED_C = replace(SMALL_CSE_SCALED, name="CSE_BETA_SMALL_SCALED_C", seed=20260934)
+SMALL_CSE_SCALED_D = replace(SMALL_CSE_SCALED, name="CSE_BETA_SMALL_SCALED_D", seed=20260935)
+SMALL_CSE_SCALED_E = replace(SMALL_CSE_SCALED, name="CSE_BETA_SMALL_SCALED_E", seed=20260936)
+
 # Section 9.2 demo: same generator, same base parameters as MATURE_CSE_DEV, but with a
 # planted metric-gaming window in the last 15% of the time span — escalation-SLA
 # compliance rises there while enrichment completion quietly falls, the exact

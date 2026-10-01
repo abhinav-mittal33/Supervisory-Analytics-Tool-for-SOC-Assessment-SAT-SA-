@@ -251,3 +251,65 @@ def detect_investigation_uniformity(
         cov = (statistics.stdev(durations) / mean) if mean > 0 else None
         signals.append(InvestigationUniformitySignal(analyst_id, n, cov, cov is not None and cov < cov_threshold))
     return signals
+
+
+# ---------------------------------------------------------------------------
+# Investigation/escalation workload vs. caseload (use-case ix: workloads
+# inconsistent with expected activity levels) — raw extraction only, same split as
+# asset_alert_counts() above; the statistical "is this unexpectedly high/low vs.
+# peers given the same caseload" judgment is negative_space.py's job (fusion.py
+# wires the two together, two-sided unlike the asset-telemetry call site).
+#
+# Escalation is attributed to the QUEUE a case currently sits in, not an analyst —
+# ESCALATE events carry no analyst or queue relationship at all in the canonical
+# OCEL model (confirmed by reading generate.py), so analyst-level escalation
+# workload isn't attempted; queue-level is the grain this model actually supports.
+# ---------------------------------------------------------------------------
+
+
+def analyst_investigation_counts(ocel: OCEL) -> list[tuple]:
+    """Returns (analyst_id, assigned_case_count, investigation_count) for every
+    Analyst object. assigned_case_count is each Case's `current_assignee` — the same
+    duty-eligible-population proxy moat2/real_data.py already relies on elsewhere in
+    this codebase (reflects the latest assignment only, not full case history)."""
+    assigned: dict[str, int] = {o.id: 0 for o in ocel.objects if o.type == "Analyst"}
+    for o in ocel.objects:
+        if o.type == "Case":
+            for r in o.relationships:
+                if r.qualifier == "current_assignee" and r.target_id in assigned:
+                    assigned[r.target_id] += 1
+
+    investigated: dict[str, int] = {aid: 0 for aid in assigned}
+    for e in ocel.events:
+        if e.type == "INVESTIGATE":
+            analyst_id = _relationship_target(e, "investigated_by")
+            if analyst_id in investigated:
+                investigated[analyst_id] += 1
+
+    return [(aid, assigned[aid], investigated[aid]) for aid in assigned]
+
+
+def queue_escalation_counts(ocel: OCEL) -> list[tuple]:
+    """Returns (queue_id, routed_case_count, escalation_count) for every Queue
+    object. routed_case_count is each Case's `current_queue`; escalation_count
+    resolves each ESCALATE event back to its case's current_queue, since the
+    ESCALATE event itself names neither an analyst nor a queue directly."""
+    queue_of_case: dict[str, str] = {}
+    routed: dict[str, int] = {o.id: 0 for o in ocel.objects if o.type == "Queue"}
+    for o in ocel.objects:
+        if o.type == "Case":
+            for r in o.relationships:
+                if r.qualifier == "current_queue":
+                    queue_of_case[o.id] = r.target_id
+                    if r.target_id in routed:
+                        routed[r.target_id] += 1
+
+    escalated: dict[str, int] = {qid: 0 for qid in routed}
+    for e in ocel.events:
+        if e.type == "ESCALATE":
+            case_id = _relationship_target(e, "escalation_for_case")
+            queue_id = queue_of_case.get(case_id)
+            if queue_id in escalated:
+                escalated[queue_id] += 1
+
+    return [(qid, routed[qid], escalated[qid]) for qid in routed]

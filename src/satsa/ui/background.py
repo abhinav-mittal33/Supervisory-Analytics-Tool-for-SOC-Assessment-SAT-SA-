@@ -61,8 +61,13 @@ def _run_job(job_id: str, cse_id: str, fmt: str, source_paths, mapping: dict) ->
         sqlite_path = tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False).name
         sqlite_io.write_sqlite(ocel, sqlite_path)
         conn = compiler.connect(sqlite_path)
-        result = fuse(ocel, conn, cse_id=cse_id, low_confidence_cases=report.low_confidence_cases)
-        portfolio_history.record_submission(cse_id, ocel, result, note="Imported via UI")
+        # Real provenance, not the synthetic-generator default — this is a real
+        # examiner-uploaded CSV/JSON/SQLite file, and the evidence package's own
+        # source_system field should say so, not silently claim "satsa-generator".
+        source_system = type(adapter).__name__
+        result = fuse(ocel, conn, cse_id=cse_id, low_confidence_cases=report.low_confidence_cases,
+                       source_system=source_system)
+        portfolio_history.record_submission(cse_id, ocel, result, note="Imported via UI", source_system=source_system)
         with _LOCK:
             _JOBS[job_id] = {"status": "done", "cse_id": cse_id, "error": None}
     except Exception as exc:  # noqa: BLE001 — surface any failure to the UI, never crash the thread silently

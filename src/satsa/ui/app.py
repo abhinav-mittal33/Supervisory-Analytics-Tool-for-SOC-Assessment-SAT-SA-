@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import dataclasses
 import tempfile
 import time
 from datetime import datetime, timezone
@@ -25,7 +26,11 @@ from satsa.evidence.verdict import (
     apply_verdict,
 )
 from satsa.generator.generate import generate
-from satsa.generator.profiles import MATURE_CSE_DEV, MATURE_CSE_SCALED, SMALL_CSE_SCALED
+from satsa.generator.profiles import (
+    MATURE_CSE_DEV, MATURE_CSE_DEV_B, MATURE_CSE_DEV_C,
+    MATURE_CSE_SCALED, MATURE_CSE_SCALED_B, MATURE_CSE_SCALED_C, MATURE_CSE_SCALED_D, MATURE_CSE_SCALED_E,
+    SMALL_CSE_SCALED, SMALL_CSE_SCALED_B, SMALL_CSE_SCALED_C, SMALL_CSE_SCALED_D, SMALL_CSE_SCALED_E,
+)
 from satsa.ingestion.adapters.csv_adapter import CSVAdapter
 from satsa.ingestion.adapters.db_adapter import DBAdapter
 from satsa.ingestion.adapters.json_adapter import JSONAdapter
@@ -54,10 +59,17 @@ AUTHORITY_LABELS = {
     "UNKNOWN": "UNKNOWN — no defensible basis, descriptive only",
 }
 
-PROFILES = {
-    "CSE_ALPHA_MATURE_DEV (dev-scale)": MATURE_CSE_DEV,
-    "CSE_ALPHA_MATURE_SCALED": MATURE_CSE_SCALED,
-    "CSE_BETA_SMALL_SCALED": SMALL_CSE_SCALED,
+DATASET_BUNDLES = {
+    "CSE_ALPHA_MATURE_DEV (dev-scale)": [MATURE_CSE_DEV, MATURE_CSE_DEV_B, MATURE_CSE_DEV_C],
+    "CSE_ALPHA_MATURE_SCALED": [MATURE_CSE_SCALED, MATURE_CSE_SCALED_B, MATURE_CSE_SCALED_C,
+                                 MATURE_CSE_SCALED_D, MATURE_CSE_SCALED_E],
+    "CSE_BETA_SMALL_SCALED": [SMALL_CSE_SCALED, SMALL_CSE_SCALED_B, SMALL_CSE_SCALED_C,
+                              SMALL_CSE_SCALED_D, SMALL_CSE_SCALED_E],
+}
+DATASET_TIER_LABELS = {
+    "CSE_ALPHA_MATURE_DEV (dev-scale)": "Alpha · small sample",
+    "CSE_ALPHA_MATURE_SCALED": "Alpha · large sample",
+    "CSE_BETA_SMALL_SCALED": "Beta · large sample",
 }
 
 
@@ -70,14 +82,22 @@ def cached_submodular_selection(finding_ids: tuple, costs: dict, budget: float, 
 
 
 @st.cache_resource(show_spinner="Generating dataset and running Moat 1 pipeline...")
-def load_pipeline(profile_name: str):
-    profile = PROFILES[profile_name]
-    ocel, ground_truth = generate(profile)
-    sqlite_path = f"/tmp/satsa_ui_{profile_name.split()[0]}.sqlite"
-    sqlite_io.write_sqlite(ocel, sqlite_path)
-    conn = compiler.connect(sqlite_path)
-    result = fuse(ocel, conn)
-    return ocel, ground_truth, result.concerns, result.suppressed
+def load_pipeline(dataset_name: str) -> dict[str, tuple]:
+    """One sample 'dataset' tier is a bundle of several independently-generated CSEs
+    (docs/assumptions.md entry 018) — each gets its own cse_id threaded into fuse()
+    so Moat 2 and the Findings table are genuinely entity-scoped, the same way the
+    Companies/Portfolio pages already work. Returns {cse_id: (ocel, FusionResult)} —
+    the same shape load_sample_portfolio() returns, so _all_portfolio_datasets() can
+    merge the two (docs/assumptions.md entry 021)."""
+    datasets = {}
+    for profile in DATASET_BUNDLES[dataset_name]:
+        ocel, _ = generate(profile)
+        sqlite_path = f"/tmp/satsa_ui_{profile.name}.sqlite"
+        sqlite_io.write_sqlite(ocel, sqlite_path)
+        conn = compiler.connect(sqlite_path)
+        result = fuse(ocel, conn, cse_id=profile.name)
+        datasets[profile.name] = (ocel, result)
+    return datasets
 
 
 def case_trace(ocel, case_id: str) -> list[dict]:
@@ -143,10 +163,16 @@ def _build_adapter_from_uploads(fmt: str):
 def _render_pending_jobs() -> None:
     """Polls in-flight background ingestion jobs on its own timer — only this
     fragment re-renders every 2 seconds, not the whole page, so nothing else in the
-    app is disrupted while a job runs."""
+    app is disrupted while a job runs.
+
+    Completion banners are kept in `st.session_state["completed_jobs"]` and
+    re-rendered every tick until explicitly dismissed — small CSV imports finish in
+    well under a second, so a one-shot st.success() shown only on the single render
+    where status first flips to "done" was effectively invisible (the very next
+    2-second tick removes the job and the banner with it). This was reported as
+    "upload button not working" even though ingestion was completing correctly — the
+    data was always being written (docs/assumptions.md entry 022)."""
     pending = st.session_state.get("pending_jobs", [])
-    if not pending:
-        return
     still_pending = []
     for job_id in pending:
         status = background.get_job_status(job_id)
@@ -154,12 +180,29 @@ def _render_pending_jobs() -> None:
             st.info(f"⏳ Processing {status.cse_id} in the background...")
             still_pending.append(job_id)
         elif status.status == "done":
-            st.success(f"{status.cse_id} — assessment complete. Open Companies to review it.")
+            # Recorded here, not in background.py — this fragment runs on the main
+            # thread (it's just a periodically-rerun Streamlit script), unlike the
+            # background job thread itself, which cannot safely touch
+            # st.session_state (see background.py's own docstring).
+            st.session_state.setdefault("imported_cse_ids", set()).add(status.cse_id)
+            st.session_state.setdefault("completed_jobs", []).append(
+                {"cse_id": status.cse_id, "ok": True, "error": None})
             background.forget_job(job_id)
         else:
-            st.error(f"{status.cse_id} — ingestion failed: {status.error}")
+            st.session_state.setdefault("completed_jobs", []).append(
+                {"cse_id": status.cse_id, "ok": False, "error": status.error})
             background.forget_job(job_id)
     st.session_state.pending_jobs = still_pending
+
+    completed = st.session_state.get("completed_jobs", [])
+    for job in completed:
+        if job["ok"]:
+            st.success(f"{job['cse_id']} — assessment complete. Open Companies to review it, "
+                       "or pick \"Imported CSE submission\" on the Findings/Review plan/Audit pages.")
+        else:
+            st.error(f"{job['cse_id']} — ingestion failed: {job['error']}")
+    if completed and st.button("Dismiss", key="dismiss_completed_jobs"):
+        st.session_state.completed_jobs = []
 
 
 def _render_upload_ingestion() -> None:
@@ -228,13 +271,18 @@ def load_sample_portfolio():
     deliberately deviant (real elevated reassignment-loop rate, large enough sample
     to clear MIN_PEER_GROUP_SIZE) so the peer-comparison table has something real to
     flag — CSE_A/B/C/E are all quiet by design."""
+    # __file__-anchored, not cwd-relative (matches portfolio/history.py's own
+    # HISTORY_DIR pattern) — a bare relative path here would silently resolve
+    # against whatever directory Streamlit happened to be launched from, and
+    # DBAdapter's read-only sqlite3 connection raises uncaught if that's wrong.
+    samples_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "samples"
     specs = [
-        ("CSE_A", CSVAdapter.from_directory("data/samples/cse_a_csv"), {}),
-        ("CSE_B", JSONAdapter.from_directory("data/samples/cse_b_json"), {}),
-        ("CSE_C", DBAdapter("data/samples/cse_c_sqlite/cse_c.sqlite"),
+        ("CSE_A", CSVAdapter.from_directory(str(samples_dir / "cse_a_csv")), {}),
+        ("CSE_B", JSONAdapter.from_directory(str(samples_dir / "cse_b_json")), {}),
+        ("CSE_C", DBAdapter(str(samples_dir / "cse_c_sqlite" / "cse_c.sqlite")),
          {"cases": {"analyst_id": "handler", "queue_id": "team"}}),
-        ("CSE_D", CSVAdapter.from_directory("data/samples/cse_d_csv"), {}),
-        ("CSE_E", JSONAdapter.from_directory("data/samples/cse_e_json"), {}),
+        ("CSE_D", CSVAdapter.from_directory(str(samples_dir / "cse_d_csv")), {}),
+        ("CSE_E", JSONAdapter.from_directory(str(samples_dir / "cse_e_json")), {}),
     ]
     datasets = {}
     for cse_id, adapter, overrides in specs:
@@ -248,9 +296,13 @@ def load_sample_portfolio():
         sqlite_path = tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False).name
         sqlite_io.write_sqlite(ocel, sqlite_path)
         conn = compiler.connect(sqlite_path)
-        result = fuse(ocel, conn, cse_id=cse_id, low_confidence_cases=report.low_confidence_cases)
+        # Real provenance — these 5 demo CSEs are real CSV/JSON/SQLite sample files,
+        # not satsa-generator output, so the evidence package should say which.
+        source_system = type(adapter).__name__
+        result = fuse(ocel, conn, cse_id=cse_id, low_confidence_cases=report.low_confidence_cases,
+                       source_system=source_system)
         datasets[cse_id] = (ocel, result)
-        portfolio_history.seed_demo_history(cse_id, ocel, result)
+        portfolio_history.seed_demo_history(cse_id, ocel, result, source_system=source_system)
     return datasets
 
 
@@ -304,7 +356,19 @@ def detail_list(title: str, values: list[str]) -> None:
         st.caption("None recorded")
 
 
-def finding_detail(pkg, ocel, *, origin: str, costs: dict[str, float] | None = None, concerns=None) -> None:
+def finding_detail(pkg, ocel, *, origin: str, costs: dict[str, float] | None = None, concerns=None,
+                    cost_key: str | None = None, batch_submitted_at: str | None = None) -> None:
+    # batch_submitted_at identifies this finding's real, disk-backed batch (if any)
+    # so a recorded verdict can be persisted, not just mutated in memory — a verdict
+    # that only lived in the current Python object vanished on the next reload
+    # (docs/assumptions.md entry 025). None for batches with no portfolio_history
+    # backing (Alpha/Beta synthetic tiers, by design — entry 021) — verdicts there
+    # stay session-only, same as before.
+    # cost_key lets a caller whose `costs`/`cost_overrides` dict is keyed by something
+    # other than the bare finding_id (e.g. the Findings page's "{cse_id}/{finding_id}"
+    # composite, needed once a bundle can contain the same bare id from >1 CSE) stay
+    # consistent end to end. Defaults to the bare id for every other caller.
+    cost_key = cost_key or pkg.finding_id
     if st.button("← Back to findings", key="back_to_findings"):
         close_finding()
     st.caption(f"{origin} / Finding {pkg.finding_id}")
@@ -400,12 +464,12 @@ def finding_detail(pkg, ocel, *, origin: str, costs: dict[str, float] | None = N
     st.subheader("Examiner decision")
     new_cost = st.number_input(
         "Estimated review time (minutes)",
-        value=float((costs or {}).get(pkg.finding_id, pkg.estimated_review_cost_minutes)),
+        value=float((costs or {}).get(cost_key, pkg.estimated_review_cost_minutes)),
         min_value=0.0, step=5.0, key=f"cost_{origin}_{pkg.finding_id}",
     )
-    previous_cost = (costs or {}).get(pkg.finding_id, pkg.estimated_review_cost_minutes)
+    previous_cost = (costs or {}).get(cost_key, pkg.estimated_review_cost_minutes)
     if new_cost != previous_cost:
-        st.session_state.cost_overrides[pkg.finding_id] = new_cost
+        st.session_state.cost_overrides[cost_key] = new_cost
         st.session_state.audit_log.append({
             "time": datetime.now(timezone.utc).isoformat(), "event": "COST_OVERRIDE",
             "finding_id": pkg.finding_id, "detail": f"{previous_cost:.1f} -> {new_cost:.1f} minutes",
@@ -447,12 +511,23 @@ def finding_detail(pkg, ocel, *, origin: str, costs: dict[str, float] | None = N
         try:
             apply_verdict(pkg, Verdict(pkg.finding_id, verdict_type, capability_link,
                                        sub_type, authority_violated, duplicate_of, notes or None))
+            persisted = False
+            if pkg.cse_id and batch_submitted_at:
+                portfolio_history.record_verdict(pkg.cse_id, batch_submitted_at, pkg.finding_id, {
+                    "verdict": pkg.verdict, "verdict_capability_link": pkg.verdict_capability_link,
+                    "verdict_sub_type": pkg.verdict_sub_type,
+                    "verdict_authority_violated": pkg.verdict_authority_violated,
+                    "duplicate_of_finding_id": pkg.duplicate_of_finding_id,
+                    "verdict_notes": pkg.verdict_notes,
+                })
+                persisted = True
             audit_detail = label(verdict_type) + (f" — \"{notes}\"" if notes else "")
             st.session_state.audit_log.append({
                 "time": datetime.now(timezone.utc).isoformat(), "event": "VERDICT_RECORDED",
                 "finding_id": pkg.finding_id, "detail": audit_detail,
             })
-            st.success(f"Verdict recorded: {label(verdict_type)}")
+            st.success(f"Verdict recorded: {label(verdict_type)}" + ("" if persisted else
+                       " (this session only — this batch has no stored history to save it to)"))
         except InvalidVerdictError as exc:
             st.error(f"Verdict could not be recorded: {exc}")
 
@@ -462,33 +537,68 @@ def finding_detail(pkg, ocel, *, origin: str, costs: dict[str, float] | None = N
         "status. Confirmed = the same analysis, officially tied to this finding, only "
         "once you've recorded TRUE_SUPERVISORY_FINDING above."
     )
-    concerns_for_report = concerns if concerns else [pkg]
+    # `concerns` can span multiple CSEs when it's the Findings page's merged bundle
+    # (docs/assumptions.md entry 018) — scope the report to this finding's own entity
+    # only, so an "entity-wide" signal never mixes in another CSE's findings.
+    same_entity = [c for c in (concerns or []) if c.cse_id == pkg.cse_id]
+    concerns_for_report = same_entity or [pkg]
     st.iframe(build_intervention_report(pkg.cse_id or origin, ocel, concerns_for_report), height=520)
 
 
 def _all_portfolio_datasets() -> dict:
-    """Sample entities + anything already in this session's memory + anything a
-    background ingestion job has written to disk (Phase F) — discovered purely
-    from `portfolio_history`, since the background thread never touches
-    `st.session_state` directly."""
-    datasets = {**load_sample_portfolio(), **st.session_state.get("custom_portfolio_entities", {})}
+    """Sample entities (first-ever load only, via the process-wide
+    `load_sample_portfolio()` cache) + whatever `portfolio_history` actually has on
+    disk right now for every entity — disk is always authoritative once any real
+    submission history exists for a `cse_id` (including the 5 demo ones, which
+    `load_sample_portfolio()` itself seeds into `portfolio_history` on first load),
+    so a newly-imported batch onto an EXISTING entity is picked up too, not just a
+    brand-new `cse_id`. The background job thread never touches `st.session_state`
+    directly (see background.py) — this is how its disk writes actually surface.
+
+    Re-fusing on every call would be expensive (the exact cost this session already
+    fixed once for submodular selection) — so the expensive `load_batch()` re-fuse
+    only runs when a `cse_id`'s latest submission timestamp has actually advanced
+    since this session last checked; otherwise the previously-loaded result is
+    reused. Checking the timestamp itself is cheap (`list_submissions()` just reads
+    small `manifest.json` files, not a re-fuse)."""
+    datasets = {**load_sample_portfolio()}
+    refreshed = st.session_state.setdefault("portfolio_disk_cache", {})
     for cse_id in portfolio_history.list_entity_ids():
-        if cse_id in datasets:
-            continue
         submissions = portfolio_history.list_submissions(cse_id)
         if not submissions:
             continue
-        loaded = portfolio_history.load_batch(cse_id, submissions[-1].submitted_at)
-        if loaded:
-            datasets[cse_id] = loaded
+        latest_ts = submissions[-1].submitted_at
+        cached_ts, cached_data = refreshed.get(cse_id, (None, None))
+        if cached_ts != latest_ts:
+            loaded = portfolio_history.load_batch(cse_id, latest_ts)
+            if loaded:
+                cached_ts, cached_data = latest_ts, loaded
+                refreshed[cse_id] = (cached_ts, cached_data)
+        if cached_data:
+            datasets[cse_id] = cached_data
+
+    # The Alpha/Beta synthetic dataset tier currently selected in the sidebar
+    # (docs/assumptions.md entry 021) — merged in on top, EXCLUSIVELY: recomputed
+    # from the current selector value on every call, so switching tiers removes the
+    # previous one's CSEs here rather than accumulating them. Deliberately never
+    # seeded into portfolio_history — doing so would make the disk-refresh loop
+    # above resurface a since-deselected tier forever, defeating the "switching
+    # removes the old one" requirement.
+    selected_tier = st.session_state.get("active_dataset_tier")
+    if selected_tier:
+        datasets.update(load_pipeline(selected_tier))
     return datasets
 
 
 def _pick_batch(entity_id: str, ocel, result, submissions: list, key_prefix: str):
     """Shared batch selector — used by Companies and the Audit & Reports console so
     both pages pick a specific dated batch the same, reliable way. Returns
-    (batch_ocel, batch_result, batch_label) or None if the chosen batch has no
-    stored raw data (the demo-seed cycle)."""
+    (batch_ocel, batch_result, batch_label, batch_submitted_at) or None if the chosen
+    batch has no stored raw data (the demo-seed cycle). batch_submitted_at is the
+    real ISO timestamp (None if this entity has no portfolio_history backing at
+    all) — needed so a recorded verdict can be persisted to the right batch
+    (docs/assumptions.md entry 025), not just `batch_label`'s truncated display
+    string."""
     if submissions:
         st.table([
             {"Submitted": s.submitted_at[:10], "Cases": s.case_count, "Findings": s.concern_count,
@@ -505,8 +615,10 @@ def _pick_batch(entity_id: str, ocel, result, submissions: list, key_prefix: str
         format_func=lambda s: (s[:10] + (" (last submitted)" if submissions and s == submissions[-1].submitted_at else "")) if s != "(current)" else "Current",
         key=f"{key_prefix}_batch_{entity_id}",
     )
-    if not submissions or chosen_batch == submissions[-1].submitted_at:
-        return ocel, result, "latest"
+    if not submissions:
+        return ocel, result, "latest", None
+    if chosen_batch == submissions[-1].submitted_at:
+        return ocel, result, "latest", chosen_batch
     loaded = portfolio_history.load_batch(entity_id, chosen_batch)
     if loaded is None:
         st.warning(
@@ -515,7 +627,7 @@ def _pick_batch(entity_id: str, ocel, result, submissions: list, key_prefix: str
             "nothing to drill into."
         )
         return None
-    return loaded[0], loaded[1], chosen_batch[:10]
+    return loaded[0], loaded[1], chosen_batch[:10], chosen_batch
 
 
 def render_companies() -> None:
@@ -529,12 +641,12 @@ def render_companies() -> None:
         return
 
     if st.session_state.get("open_finding_id") and st.session_state.get("open_finding_origin") == "Companies":
-        batch_ocel, batch_result = st.session_state.get("companies_batch_data", (None, None))
+        batch_ocel, batch_result, batch_submitted_at = st.session_state.get("companies_batch_data", (None, None, None))
         if batch_result:
             pkg = next((c for c in batch_result.concerns if c.finding_id == st.session_state.open_finding_id), None)
             if pkg:
                 finding_detail(pkg, batch_ocel, origin=f"Companies / {st.session_state.get('open_finding_entity')}",
-                              concerns=batch_result.concerns)
+                              concerns=batch_result.concerns, batch_submitted_at=batch_submitted_at)
                 return
 
     entity_id = st.session_state.get("companies_entity")
@@ -543,19 +655,45 @@ def render_companies() -> None:
         st.title("Companies")
         st.write("Every entity that has ever submitted data. Pick one to see its submission history.")
         entity_query = st.text_input("Search companies", placeholder="Entity ID")
-        rows = []
-        for eid, (_, result) in datasets.items():
-            if entity_query and entity_query.casefold() not in eid.casefold():
-                continue
+
+        # Split, not one flat merged list — makes it visible which entities are
+        # real/imported (persistent, tracked in portfolio_history) vs. which came
+        # from the sidebar's currently-selected synthetic sample tier (swaps out
+        # entirely when that selector changes, docs/assumptions.md entry 021) —
+        # switching the selector and seeing a DIFFERENT labeled group of companies,
+        # with different briefings/Moat 2 results, is the actual proof this is live
+        # computation, not a fixed preset screen.
+        selected_tier = st.session_state.get("active_dataset_tier")
+        tier_ids = {p.name for p in DATASET_BUNDLES[selected_tier]} if selected_tier else set()
+
+        def _row(eid: str, result) -> dict:
             subs = portfolio_history.list_submissions(eid)
-            rows.append({
+            return {
                 "Company": eid, "Findings (latest)": len(result.concerns),
                 "Batches on record": len(subs) or 1,
                 "Last submitted": subs[-1].submitted_at[:10] if subs else "not recorded",
-            })
-        _, picked = paged_table(rows, "companies", selectable=True)
-        options = ["(select a company)"] + [r["Company"] for r in rows]
+            }
+
+        demo_rows, tier_rows = [], []
+        for eid, (_, result) in datasets.items():
+            if entity_query and entity_query.casefold() not in eid.casefold():
+                continue
+            (tier_rows if eid in tier_ids else demo_rows).append(_row(eid, result))
+
+        st.subheader(f"Demo & imported companies ({len(demo_rows)})")
+        st.caption("Real submission history — CSE_A-E plus anything imported via the Import data page.")
+        _, picked_demo = paged_table(demo_rows, "companies_demo", selectable=True)
+
+        tier_label = DATASET_TIER_LABELS.get(selected_tier, selected_tier)
+        st.subheader(f"Current sample dataset: {tier_label} ({len(tier_rows)})")
+        st.caption("Switch \"Sample dataset\" in the sidebar to swap this entire group for a different one — "
+                   "Companies, Peer comparison, and Moat 2 all follow it live.")
+        _, picked_tier = paged_table(tier_rows, "companies_tier", selectable=True)
+
+        all_rows = demo_rows + tier_rows
+        options = ["(select a company)"] + [r["Company"] for r in all_rows]
         chosen = st.selectbox("Or pick a company directly", options)
+        picked = picked_demo or picked_tier
         target = picked["Company"] if picked else (chosen if chosen != "(select a company)" else None)
         if target:
             st.session_state.companies_entity = target
@@ -611,8 +749,8 @@ def render_companies() -> None:
     picked_batch = _pick_batch(entity_id, ocel, result, submissions, key_prefix="companies")
     if picked_batch is None:
         return
-    batch_ocel, batch_result, batch_label = picked_batch
-    st.session_state.companies_batch_data = (batch_ocel, batch_result)
+    batch_ocel, batch_result, batch_label, batch_submitted_at = picked_batch
+    st.session_state.companies_batch_data = (batch_ocel, batch_result, batch_submitted_at)
 
     st.subheader(f"Findings — {batch_label}")
     st.caption("Pick a finding below to see its complete evidence, case timeline, and record a verdict.")
@@ -629,6 +767,17 @@ def render_companies() -> None:
     target_finding = picked["Finding ID"] if picked else (picked_dropdown if picked_dropdown != "(select a finding)" else None)
     if target_finding:
         open_finding(target_finding, "Companies", entity_id)
+
+    # Inline, not just a download — the Findings page already shows this live
+    # (docs/assumptions.md entry 018); Companies only ever offered it as a file,
+    # which made it easy to miss that a real, computed entity-wide signal exists
+    # at all until you drill into one finding's own Moat 2 card.
+    with st.expander(f"Overall suggestion for {entity_id} (Moat 2)"):
+        st.caption(
+            "A real, computed signal across every finding at this entity — not tied "
+            "to any one finding's verdict status."
+        )
+        st.iframe(build_intervention_report(entity_id, batch_ocel, batch_result.concerns), height=520)
 
     st.subheader("Downloads for this entity")
     col1, col2, col3 = st.columns(3)
@@ -657,6 +806,11 @@ def render_peer_comparison() -> None:
     indicators = compute_entity_risk_indicators(datasets)
     st.title("Peer comparison")
     st.write("How each entity's supervisory signals compare to its peers, entity by entity.")
+    selected_tier = st.session_state.get("active_dataset_tier")
+    if selected_tier:
+        st.caption(f"Includes CSE_A-E plus the sidebar's current sample dataset "
+                   f"({DATASET_TIER_LABELS.get(selected_tier, selected_tier)}) — switch it to compare a different "
+                   "set of synthetic entities live.")
     stats = st.columns(3)
     stats[0].metric("Entities", len(indicators))
     stats[1].metric("Findings", sum(len(result.concerns) for _, result in datasets.values()))
@@ -702,23 +856,73 @@ def render_import() -> None:
 
 def get_assessment():
     with st.sidebar:
+        imported_ids = sorted(st.session_state.get("imported_cse_ids", set()))
         source_options = ["Sample assessment"]
-        if st.session_state.get("uploaded_pipeline", (None, None, None))[0] is not None:
+        if imported_ids:
             source_options.insert(0, "Imported CSE submission")
         source = st.selectbox("Assessment", source_options, key="assessment_source")
+        # cse_id -> real submitted_at for the batch each concern came from, so a
+        # recorded verdict can be persisted to the right disk batch instead of only
+        # mutated in memory (docs/assumptions.md entry 025). None per cse_id for the
+        # Alpha/Beta synthetic tiers, which have no portfolio_history backing at all
+        # by design (entry 021) — verdicts there stay session-only, as before.
+        batch_submitted_at_by_cse_id: dict[str, str | None] = {}
         if source == "Sample assessment":
-            profile_name = st.selectbox("Sample dataset", list(PROFILES), format_func=lambda name: {
-                "CSE_ALPHA_MATURE_DEV (dev-scale)": "Alpha · small sample",
-                "CSE_ALPHA_MATURE_SCALED": "Alpha · large sample",
-                "CSE_BETA_SMALL_SCALED": "Beta · large sample",
-            }[name])
-            ocel, _, concerns, suppressed = load_pipeline(profile_name)
+            # Selector itself now lives in main()'s sidebar (rendered on every page,
+            # including Companies/Peer comparison) so it's a single, global source of
+            # truth, not a Findings-only control (docs/assumptions.md entry 021).
+            profile_name = st.session_state["active_dataset_tier"]
+            per_cse = load_pipeline(profile_name)
+            ocel_by_cse_id = {cid: o for cid, (o, _r) in per_cse.items()}
+            concerns = [c for _, r in per_cse.values() for c in r.concerns]
+            suppressed = [s for _, r in per_cse.values() for s in r.suppressed]
             scope = profile_name
+            batch_submitted_at_by_cse_id = {cid: None for cid in per_cse}
         else:
-            ocel, concerns, suppressed = st.session_state.uploaded_pipeline
-            scope = "Imported CSE submission"
-        st.caption(f"{len(ocel.objects):,} objects · {len(ocel.events):,} events")
-    return ocel, concerns, suppressed, scope
+            # Reuses _all_portfolio_datasets() — the same always-fresh, disk-backed
+            # source Companies already shows (docs/assumptions.md entry 020) — rather
+            # than a separate, parallel load path.
+            chosen_cse_id = (
+                st.selectbox("Imported entity", imported_ids, key="imported_entity_choice")
+                if len(imported_ids) > 1 else imported_ids[0]
+            )
+            ocel, result = _all_portfolio_datasets()[chosen_cse_id]
+            concerns, suppressed = result.concerns, result.suppressed
+            scope = f"Imported: {chosen_cse_id}"
+            ocel_by_cse_id = {chosen_cse_id: ocel}
+            chosen_submissions = portfolio_history.list_submissions(chosen_cse_id)
+            batch_submitted_at_by_cse_id = {chosen_cse_id: chosen_submissions[-1].submitted_at if chosen_submissions else None}
+        total_objects = sum(len(o.objects) for o in ocel_by_cse_id.values())
+        total_events = sum(len(o.events) for o in ocel_by_cse_id.values())
+        entity_word = "entity" if len(ocel_by_cse_id) == 1 else "entities"
+        st.caption(f"{total_objects:,} objects · {total_events:,} events across "
+                   f"{len(ocel_by_cse_id)} {entity_word}")
+    return ocel_by_cse_id, concerns, suppressed, scope, batch_submitted_at_by_cse_id
+
+
+def _interleave_by_capability(ids: list[str], by_id: dict) -> list[str]:
+    """Escalation findings sit at the mathematical ceiling of concern_score (1.0 =
+    CAPABILITY_MATERIALITY["Escalation"] x AUTHORITY_SEVERITY_WEIGHT["MANDATORY"],
+    both 1.0 -- moat1/fusion.py:117), so a pure score-descending sort always puts
+    every Escalation finding before any other capability -- more visible now that a
+    bundle merges several CSEs' worth of them onto one page. Round-robin across
+    capabilities (each internally still sorted by concern_score, highest-scoring
+    capability still goes first within each round) so the table shows a mix instead
+    of one capability filling every page before another appears."""
+    groups: dict[str, list[str]] = {}
+    for fid in ids:
+        groups.setdefault(by_id[fid].capability, []).append(fid)
+    for group in groups.values():
+        group.sort(key=lambda fid: -by_id[fid].concern_score)
+    group_order = sorted(groups, key=lambda cap: -by_id[groups[cap][0]].concern_score)
+    result = []
+    i = 0
+    while any(i < len(groups[cap]) for cap in group_order):
+        for cap in group_order:
+            if i < len(groups[cap]):
+                result.append(groups[cap][i])
+        i += 1
+    return result
 
 
 def main() -> None:
@@ -726,8 +930,7 @@ def main() -> None:
     st.html((Path(__file__).with_name("styles.css")).read_text())
     for key, default in {"audit_log": [], "cost_overrides": {}, "timers": {},
                          "open_finding_id": None, "finding_table_version": 0,
-                         "custom_portfolio_entities": {}, "companies_entity": None,
-                         "pending_jobs": []}.items():
+                         "companies_entity": None, "pending_jobs": []}.items():
         if key not in st.session_state:
             st.session_state[key] = default
     with st.sidebar:
@@ -737,6 +940,12 @@ def main() -> None:
             ["Companies", "Peer comparison", "Findings", "Import data", "Review plan", "Audit & Reports"],
             key="workspace",
         )
+        st.divider()
+        # Global, not Findings-only (docs/assumptions.md entry 021) — rendered here
+        # so it's visible/settable from every page, including Companies/Peer
+        # comparison, which return before get_assessment() would ever run it.
+        st.selectbox("Sample dataset", list(DATASET_BUNDLES),
+                     format_func=lambda name: DATASET_TIER_LABELS[name], key="active_dataset_tier")
         st.divider()
         st.caption("Local, offline examiner workspace")
 
@@ -750,29 +959,52 @@ def main() -> None:
         render_peer_comparison()
         return
 
-    ocel, concerns, suppressed, scope = get_assessment()
+    ocel_by_cse_id, concerns, suppressed, scope, batch_submitted_at_by_cse_id = get_assessment()
     total_cost = sum(c.estimated_review_cost_minutes for c in concerns)
     with st.sidebar:
         fraction = st.slider("Review time budget", 0.05, 1.0, 0.3, 0.05)
         st.caption(f"{total_cost * fraction / 60:.1f} of {total_cost / 60:.1f} estimated hours")
-    costs = {c.finding_id: st.session_state.cost_overrides.get(c.finding_id, c.estimated_review_cost_minutes)
+
+    def _fkey(c) -> str:
+        # Bare finding_id resets to FIND00001 on every fuse() call (moat1/fusion.py),
+        # so it collides across CSEs once a dataset bundles more than one
+        # (docs/assumptions.md entry 018). Composite key keeps every dict/lookup below
+        # unique without touching the Gate-4-validated finding_id scheme itself.
+        return f"{c.cse_id}/{c.finding_id}"
+
+    costs = {_fkey(c): st.session_state.cost_overrides.get(_fkey(c), c.estimated_review_cost_minutes)
              for c in concerns}
-    by_id = {c.finding_id: c for c in concerns}
+    by_id = {_fkey(c): c for c in concerns}
     selected, _ = cached_submodular_selection(
         tuple(by_id), costs, total_cost * fraction,
-        {c.finding_id: f"{c.capability}|{c.finding_type}" for c in concerns},
+        {_fkey(c): f"{c.capability}|{c.finding_type}" for c in concerns},
     )
     if page == "Findings":
         if st.session_state.open_finding_id in by_id and st.session_state.get("open_finding_origin") == "Findings":
-            finding_detail(by_id[st.session_state.open_finding_id], ocel, origin="Findings", costs=costs, concerns=concerns)
+            pkg = by_id[st.session_state.open_finding_id]
+            finding_detail(pkg, ocel_by_cse_id[pkg.cse_id], origin="Findings", costs=costs, concerns=concerns,
+                            cost_key=st.session_state.open_finding_id,
+                            batch_submitted_at=batch_submitted_at_by_cse_id.get(pkg.cse_id))
             return
         st.title("Findings")
         st.write(f"{scope} · {len(concerns):,} findings · {len(selected):,} selected within the current review budget")
         st.caption("Click a row to open the full finding, its source evidence and the examiner decision form.")
-        filters = st.columns([2, 1, 1])
+        filters = st.columns([2, 1, 1, 1])
         query = filters[0].text_input("Search findings", placeholder="Finding, case or entity ID")
         capability = filters[1].selectbox("Capability", ["All"] + sorted({c.capability for c in concerns}))
         view = filters[2].selectbox("Show", ["Selected for review", "All findings"])
+        entity_filter = filters[3].selectbox("Entity", ["All"] + sorted(ocel_by_cse_id))
+        if entity_filter != "All":
+            entity_concerns = [c for c in concerns if c.cse_id == entity_filter]
+            with st.expander(f"Overall suggestion for {entity_filter} (Moat 2)", expanded=True):
+                st.caption(
+                    "A real, computed signal across every finding at this entity — not tied "
+                    "to any one finding's verdict status."
+                )
+                st.iframe(
+                    build_intervention_report(entity_filter, ocel_by_cse_id[entity_filter], entity_concerns),
+                    height=520,
+                )
         source_ids = selected if view == "Selected for review" else list(by_id)
         rows = [
             {"Finding ID": fid, "Finding": label(by_id[fid].finding_type),
@@ -781,9 +1013,10 @@ def main() -> None:
              "Evidence quality": by_id[fid].evidence_quality,
              "Case": by_id[fid].affected_objects[0] if by_id[fid].affected_objects else "—",
              "Entity": by_id[fid].cse_id or scope}
-            for fid in sorted(source_ids, key=lambda fid: -by_id[fid].concern_score)
+            for fid in _interleave_by_capability(list(source_ids), by_id)
         ]
         rows = [r for r in rows if (capability == "All" or r["Capability"] == capability)
+                and (entity_filter == "All" or r["Entity"] == entity_filter)
                 and (not query or query.casefold() in " ".join(str(v) for v in r.values()).casefold())]
         if rows:
             _, picked = paged_table(rows, "findings", selectable=True)
@@ -796,7 +1029,14 @@ def main() -> None:
     if page == "Review plan":
         st.title("Review plan")
         st.write(f"{scope} · how the current time budget covers the selected findings")
-        explanation = explain_allocation(selected, concerns, total_cost * fraction,
+        # explain_allocation() rebuilds its own finding_id-keyed lookup internally
+        # (sampling/allocation_explanation.py) — bare finding_id collides across CSEs
+        # in a bundle the same way `by_id` above did, so feed it concerns carrying the
+        # same composite id `selected` was computed against. Untouched module, no
+        # Gate-4 risk: this only relabels the copies passed in here, never the
+        # originals (concerns' own finding_id is never displayed from `explanation`).
+        concerns_for_explain = [dataclasses.replace(c, finding_id=_fkey(c)) for c in concerns]
+        explanation = explain_allocation(selected, concerns_for_explain, total_cost * fraction,
                                          increment_minutes=total_cost * 0.1)
         cols = st.columns(3)
         cols[0].metric("Selected findings", explanation.num_concerns_selected)
@@ -852,7 +1092,7 @@ def main() -> None:
         with st.expander("Pick a specific batch (defaults to the latest)"):
             picked = _pick_batch(raw_entity, raw_ocel, raw_result, raw_submissions, key_prefix="raw")
         if picked is not None:
-            raw_ocel, _raw_result, raw_batch_label = picked
+            raw_ocel, _raw_result, raw_batch_label, _raw_submitted_at = picked
             st.caption(f"Showing batch: {raw_batch_label} · {len(raw_ocel.objects):,} objects · {len(raw_ocel.events):,} events")
             obj_types = sorted({o.type for o in raw_ocel.objects})
             obj_filter = st.selectbox("Object type", ["All"] + obj_types, key=f"raw_obj_type_{raw_entity}")
@@ -882,7 +1122,7 @@ def main() -> None:
         with st.expander("Pick a specific batch (defaults to the latest)"):
             console_picked = _pick_batch(console_entity, console_ocel, console_result, console_submissions, key_prefix="console")
         if console_picked is not None:
-            console_ocel, console_result, _console_label = console_picked
+            console_ocel, console_result, _console_label, _console_submitted_at = console_picked
             col1, col2, col3 = st.columns(3)
             col1.download_button(
                 "Supervisory report (HTML)",
